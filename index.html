@@ -1603,7 +1603,7 @@ async function renderDirectory(){
   const box=document.getElementById('dirBody');
   if(!dataReady){
     box.replaceChildren(loadDone&&!db
-      ? el('div',{class:'gate'}, el('div',null, el('b',{text:'Members only'}), el('span',{text:'Sign in to see the directory, post projects and join working groups. Ask the consortium coordinator for an invitation if you do not have access.'})), signInButton())
+      ? el('div',{class:'gate'}, el('div',null, el('b',{text:'Members only'}), el('span',{text:'Sign in to see the directory, post projects and join working groups. New here? Click Sign in, then “Request to join”.'})), signInButton())
       : el('div',{class:'empty',text:'Loading directory…'}));
     return;
   }
@@ -1831,7 +1831,7 @@ function privacyGate(text){
 function canParticipate(){ return !!(db&&me&&me.id&&canWrite!==false&&profileComplete(membersByUser[me.id])); }
 function memberGate(what){
   if(!loadDone) return el('div',{class:'empty',text:'Loading…'});
-  if(!db||!me||!me.id) return el('div',{class:'gate'}, el('div',null, el('b',{text:'Members only'}), el('span',{text:STATIC_SITE?`Member sign-in is coming soon. Until then, enjoy the research radar.`:`Sign in to see ${what}. Ask the webmaster for an invitation.`})), STATIC_SITE?null:signInButton());
+  if(!db||!me||!me.id) return el('div',{class:'gate'}, el('div',null, el('b',{text:'Members only'}), el('span',{text:STATIC_SITE?`Member sign-in is coming soon. Until then, enjoy the research radar.`:`Sign in to see ${what}. New here? Click Sign in, then “Request to join”.`})), STATIC_SITE?null:signInButton());
   if(canWrite===false) return el('div',{class:'gate'}, el('div',null, el('b',{text:'Contributor access needed'}), el('span',{text:`Your access is view-only, so ${what} are hidden. Ask the webmaster for Contributor access.`})));
   if(!profileComplete(membersByUser[me.id])) return el('div',{class:'gate'}, el('div',null, el('b',{text:'Complete your profile'}), el('span',{text:`Add your organization, specialty and work email to see ${what}.`})), el('button',{class:'btn primary',type:'button',onclick:()=>openProfile(false)},'Complete profile'));
   return null;
