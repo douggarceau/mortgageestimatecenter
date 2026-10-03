@@ -785,6 +785,9 @@ main.wrap{max-width:1360px}
 .fbright .bell.lit .bellbtn{background:#E4E6EB;box-shadow:none}
 .fbright .bell.urgent .bellbtn{background:#FFE3CC}
 .fbright .bellcount{border-color:#fff}
+.fbright [data-label]{overflow:visible}
+.fbright [data-label]::before{content:attr(data-label);position:absolute;top:calc(100% + 3px);left:50%;transform:translateX(-50%);font:700 11px/1 var(--f-body);color:#4B4F56;white-space:nowrap;pointer-events:none;letter-spacing:0;filter:none}
+.fbright{padding-bottom:14px}
 .mewrap{position:relative}
 .fbme{width:40px;height:40px;border-radius:50%;border:0;padding:0;cursor:pointer;overflow:hidden;background:#E4E6EB}
 .fbme img{width:100%;height:100%;object-fit:cover}
@@ -1093,12 +1096,12 @@ b.ulink:hover,.nm.ulink:hover{text-decoration:underline}
       <button class="fbtab" type="button" data-view="meetings" data-tip="Meetings"><span>📅</span><em>Meetings</em></button>
     </nav>
     <div class="fbright">
-      <button class="fbicon" type="button" id="helpBtn" aria-label="Help" data-tip="Help">?</button>
-      <button class="fbicon" type="button" id="navFriends" hidden aria-label="Friend requests" data-tip="Friend requests">👥</button>
-      <div class="chatwrap" id="chatWrap"><button class="fbicon" type="button" id="navMsg" hidden aria-label="Messages" data-tip="Messages">💬</button><div class="chatpop" id="chatMenu" hidden></div></div>
+      <button class="fbicon" type="button" id="helpBtn" aria-label="Help" data-label="Help">?</button>
+      <button class="fbicon" type="button" id="navFriends" hidden aria-label="Friend requests" data-label="Friends">👥</button>
+      <div class="chatwrap" id="chatWrap"><button class="fbicon" type="button" id="navMsg" hidden aria-label="Messages" data-label="Chats">💬</button><div class="chatpop" id="chatMenu" hidden></div></div>
       <div class="bell" id="bell" hidden></div>
       <button class="btn primary small" type="button" id="signInBtn" hidden>Sign in</button>
-      <div class="mewrap" id="meWrap"><button class="fbme" type="button" id="meBtn" hidden aria-label="Account" data-tip="Your account"><img id="meImg" alt=""></button><div class="memenu" id="meMenu" hidden></div></div>
+      <div class="mewrap" id="meWrap"><button class="fbme" type="button" id="meBtn" hidden aria-label="Account" data-label="Me"><img id="meImg" alt=""></button><div class="memenu" id="meMenu" hidden></div></div>
       <button type="button" id="postBtn" hidden>Post</button>
       <div class="who" id="who" hidden></div>
     </div>
@@ -2758,7 +2761,7 @@ function renderBell(){
   if(!canParticipate()){ host.hidden=true; return; } host.hidden=false;
   const ev=fbEvents(); const unread=ev.filter(x=>x.unread).length; const urgent=ev.some(x=>x.urgent);
   host.className='bell'+(urgent?' urgent':unread?' lit':'');
-  const btn=el('button',{class:'bellbtn',type:'button','aria-label':unread?`Notifications, ${unread} new`:'Notifications','aria-expanded':String(bellOpen),'data-tip':'Notifications',
+  const btn=el('button',{class:'bellbtn',type:'button','data-label':'Alerts','aria-label':unread?`Notifications, ${unread} new`:'Notifications','aria-expanded':String(bellOpen),
     onclick:e=>{ e.stopPropagation(); bellOpen=!bellOpen; renderBell(); }}, '🔔', unread?el('span',{class:'bellcount',text:unread>9?'9+':unread}):null);
   let panel=null;
   if(bellOpen){ resolve([...new Set(ev.map(x=>x.uid).filter(Boolean))]);
@@ -3027,7 +3030,7 @@ function runSearch(q){
 function renderMe(){
   const img=document.getElementById('meImg'); if(img){ img.src=(me&&me.avatarUrl)||''; img.alt=(me&&me.name)||'Account'; }
   const b=document.getElementById('meBtn'); if(b) b.hidden=!(me&&me.id);
-  const fr=document.getElementById('navFriends'); if(fr){ const ok=canParticipate(); fr.hidden=!ok; let n=0; try{ n=ok?incomingRequests().length:0; }catch(e){} const old=fr.querySelector('.frcount'); if(old) old.remove(); if(n) fr.append(el('span',{class:'frcount',text:n>9?'9+':String(n)})); fr.setAttribute('aria-label',n?`Friend requests, ${n} waiting`:'Friend requests'); fr.dataset.tip=n?`${n} friend request${n>1?'s':''}`:'Friends'; }
+  const fr=document.getElementById('navFriends'); if(fr){ const ok=canParticipate(); fr.hidden=!ok; let n=0; try{ n=ok?incomingRequests().length:0; }catch(e){} const old=fr.querySelector('.frcount'); if(old) old.remove(); if(n) fr.append(el('span',{class:'frcount',text:n>9?'9+':String(n)})); fr.setAttribute('aria-label',n?`Friend requests, ${n} waiting`:'Friend requests'); fr.dataset.label=n?'Requests':'Friends'; }
   const si=document.getElementById('signInBtn'); if(si){ si.hidden=!(loadDone&&!(me&&me.id)&&window.irtcAuth); const st=window.irtcAuth&&window.irtcAuth.status; si.textContent=(st==='pending'||st==='none'||st==='denied')?'⏳ Request pending':'Sign in'; }
 }
 let meOpen=false;
