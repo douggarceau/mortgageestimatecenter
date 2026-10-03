@@ -1,0 +1,47 @@
+name: Daily research refresh
+on:
+  schedule:
+    - cron: "15 10 * * *"   # every day ~6:15 AM US Eastern
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch PubMed, trials, preprints and grants
+        run: |
+          set +e
+          python scripts/pubmed.py /tmp/pubs.json   || (sleep 15 && python scripts/pubmed.py /tmp/pubs.json)
+          python scripts/trials.py /tmp/trials.json || (sleep 15 && python scripts/trials.py /tmp/trials.json)
+          python scripts/sleuth.py /tmp/sleuth.json || (sleep 15 && python scripts/sleuth.py /tmp/sleuth.json)
+          python - <<'PY'
+          import json, os, shutil
+          def ok(path, check):
+              try:
+                  d = json.load(open(path)); return check(d)
+              except Exception:
+                  return False
+          checks = {
+            'pubs.json':   lambda d: len(d.get('items', [])) >= 10,
+            'trials.json': lambda d: len(d.get('items', [])) >= 5,
+            'sleuth.json': lambda d: len(d.get('preprints', [])) + len(d.get('grants', [])) >= 3,
+          }
+          for name, check in checks.items():
+              src = '/tmp/' + name
+              if os.path.exists(src) and ok(src, check):
+                  shutil.copy(src, 'data/' + name); print('updated', name)
+              else:
+                  print('kept yesterday\'s', name)
+          PY
+      - name: Commit if anything changed
+        run: |
+          git config user.name "irtc-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "Daily research refresh $(date -u +%F)"
+          git push
