@@ -2636,6 +2636,7 @@ function fbEvents(){
   if(dataReady){ for(const p of allProjects()) if(!mine(p.uid)&&recent(p.created)) ev.push({uid:p.uid,ts:p.created,unread:p.created>SEEN.groups,text:[el('b',{text:who(p.uid).name}),' posted a project: '+p.title],go:()=>{ ui.group=p.group; renderGroups(); document.getElementById('groups').scrollIntoView({behavior:'smooth'}); }});
     for(const [u,m] of Object.entries(membersByUser)) if(!mine(u)&&profileDone(m)&&recent(m.joined)) ev.push({uid:u,ts:m.joined,unread:m.joined>SEEN.directory,text:[el('b',{text:who(u).name}),' joined the consortium'+(m.org?' from '+m.org:'')],go:()=>document.getElementById('directory').scrollIntoView({behavior:'smooth'})}); }
   const nr=newCounts().radar; if(nr) ev.push({ts:now-1,unread:true,icon:'🔬',text:[el('b',{text:nr+' new AT/RT research item'+(nr>1?'s':'')}),' on the radar'],go:()=>{ ui.ftab='new'; renderForward(); document.getElementById('forward').scrollIntoView({behavior:'smooth'}); }});
+  if(isAdmin()&&typeof pendingReqs==='function') for(const r of pendingReqs()) ev.push({key:'jr-'+r.uid,ts:new Date(r.created_at).getTime()||now,unread:true,urgent:true,icon:'🛂',text:[el('b',{text:r.name||r.email||'Someone'}),' asked to join'+(r.org?' from '+r.org:'')+'. Tap to review'],go:()=>openRequests()});
   return ev.sort((a,b)=>(b.urgent?1:0)-(a.urgent?1:0)||(b.unread?1:0)-(a.unread?1:0)||b.ts-a.ts).slice(0,25);
 }
 function markAllRead(){ const n=Date.now(); for(const k of ['radar','discuss','meetings','groups','directory']) SEEN[k]=n; saveSeen(); updateNewLights(); renderBell(); }
@@ -3366,7 +3367,7 @@ async function openRequests(){
     ...pend.map(row),
     done.length?el('details',null,el('summary',{text:'Approved & declined ('+done.length+')'}),el('div',{style:'margin-top:10px'},...done.map(row))):null,
     el('div',{class:'actions'},el('button',{class:'btn primary',type:'button',onclick:closeModal},'Done'))));
-  renderMeMenu(); renderMe();
+  renderMeMenu(); renderMe(); try{ renderBell(); }catch(e){}
 }
 async function loadStaticData(){
   const get=async f=>{ try{ const r=await fetch('data/'+f,{cache:'no-cache'}); return r.ok?await r.json():null; }catch(e){ return null; } };
@@ -3385,7 +3386,14 @@ async function loadStaticData(){
   if(user){ me=await user.me(); meBaseAvatar=me.avatarUrl; try{ canWrite=await user.can('data.write'); }catch(e){} }
   loadDone=true; renderAll();
   if(!db){ const st=window.irtcAuth&&window.irtcAuth.status; if(st==='pending'||st==='none'||st==='denied') setTimeout(openPending,400); return; }
-  if(isAdmin()) loadJoinRequests().then(()=>{ const n=pendingReqs().length; if(n) toast(n+' join request'+(n>1?'s':'')+' waiting. Open your account menu → Join requests.'); });
+  if(isAdmin()){
+    const seenReq=new Set();
+    const poll=async first=>{ await loadJoinRequests(); const pend=pendingReqs(); const fresh=pend.filter(r=>!seenReq.has(r.uid)); pend.forEach(r=>seenReq.add(r.uid));
+      if(first&&pend.length) toast('🛂 '+pend.length+' join request'+(pend.length>1?'s':'')+' waiting. Click the bell 🔔 to review.');
+      else if(!first&&fresh.length) toast('🛂 New join request from '+(fresh[0].name||fresh[0].email||'someone')+'. Click the bell 🔔.');
+      try{ renderBell(); renderMeMenu(); }catch(e){} };
+    poll(true); setInterval(()=>poll(false),60000);
+  }
   let gotP=false,gotM=false,prompted=false;
   let keysTried=false;
   const done=()=>{ if(gotP&&gotM){ dataReady=true; if(checkMyAccount()){ renderAll(); return; } if(!keysTried&&canParticipate()){ keysTried=true; ensureKeys().then(()=>{updateDmBadge();renderOnline();}); setPresence(); }
