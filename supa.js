@@ -19,7 +19,33 @@
     sendReset: async (email) => { const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo:here() }); if(error) throw error; },
     setPassword: async (password) => { const { error } = await sb.auth.updateUser({ password }); if(error) throw error; },
     signOut: async () => { try{ await sb.auth.signOut(); }catch(e){} location.reload(); },
-    recovering: false
+    recovering: false,
+    status: 'signedout',          // signedout | approved | pending | denied | none
+    request: null,                // this person's own join request, if any
+    // New person: create an account and file a request to join.
+    signUp: async (email, password, info) => {
+      const { data, error } = await sb.auth.signUp({ email, password, options:{ data:{ name:info.name }, emailRedirectTo:here() } });
+      if(error) throw error;
+      if(!data.session) return 'confirm';   // email confirmation is switched on in Supabase
+      const { error: e2 } = await sb.from('join_requests').insert({ uid:data.user.id, email, name:info.name, org:info.org, note:info.note });
+      if(e2 && !/duplicate/i.test(e2.message || '')) throw e2;
+      return 'requested';
+    },
+    // Signed in but no request on file yet.
+    requestAccess: async (info) => {
+      const s = await sessionReady; if(!s) throw new Error('Not signed in');
+      const { error } = await sb.from('join_requests').insert({ uid:s.user.id, email:s.user.email, name:info.name, org:info.org, note:info.note });
+      if(error) throw error;
+    },
+    // Webmaster only (the database refuses everyone else).
+    listRequests: async () => {
+      const { data, error } = await sb.from('join_requests').select('*').order('created_at', { ascending:false }).limit(500);
+      if(error) throw error; return data || [];
+    },
+    decide: async (uid, status) => {
+      const { error } = await sb.from('join_requests').update({ status, decided_at:new Date().toISOString() }).eq('uid', uid);
+      if(error) throw error;
+    }
   };
   if(/type=recovery/.test(location.hash)) window.irtcAuth.recovering = true;
   sb.auth.onAuthStateChange((ev) => {
@@ -169,6 +195,20 @@
   async function build(){
     const session = await sessionReady;
     if(!session) return { db:null, user:null, room:null };
+    // Only approved members get the member features.
+    const A = window.irtcAuth;
+    try{
+      const { data:ok, error } = await sb.rpc('irtc_is_approved');
+      if(error) throw error;
+      if(ok){ A.status = 'approved'; }
+      else{
+        const { data:row } = await sb.from('join_requests').select('*').eq('uid', session.user.id).maybeSingle();
+        A.request = row || null;
+        A.status = row ? row.status : 'none';
+        if(A.status === 'approved') A.status = 'pending';   // safety: never unlock without the server agreeing
+      }
+    }catch(e){ A.status = 'approved'; }                    // approval table not set up yet: behave as before
+    if(A.status !== 'approved') return { db:null, user:null, room:null };
     let room = null;
     return { db:makeDb(), user:makeUser(session), get room(){ return room || (room = makeRoom(session)); } };
   }
