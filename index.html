@@ -751,6 +751,35 @@ main.wrap{max-width:1360px}
 .fbicon:hover{background:#D8DADF}
 #navMsg .newlight{position:absolute;top:-4px;right:-6px;margin:0;padding:0 5px;min-width:19px;height:19px;justify-content:center;background:#E41E3F;color:#fff;border:2px solid #fff;border-radius:999px;font:800 11px/15px var(--f-body);letter-spacing:0}
 #navMsg .newlight i{display:none}
+.chatwrap{position:relative;display:inline-flex}
+.chatpop{position:absolute;right:-60px;top:calc(100% + 8px);width:min(380px,calc(100vw - 24px));max-height:min(640px,calc(100vh - 90px));display:flex;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.22);z-index:80;overflow:hidden;color:var(--ink)}
+.chathead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px}
+.chathead h3{margin:0;font:800 24px/1.2 var(--f-body)}
+.chathead .acts{display:flex;gap:6px}
+.chathead .acts button{width:34px;height:34px;border-radius:50%;border:0;background:#F0F2F5;cursor:pointer;font-size:15px}
+.chathead .acts button:hover{background:#E4E6EB}
+.chatsearch{margin:6px 16px;border:0;background:#F0F2F5;border-radius:999px;padding:9px 14px;font-size:15px}
+.chatsearch:focus{outline:2px solid var(--glow)}
+.chattabs{display:flex;gap:6px;padding:4px 16px 8px}
+.chattabs button{border:0;background:transparent;border-radius:999px;padding:6px 12px;font-weight:600;font-size:14.5px;cursor:pointer;color:var(--ink)}
+.chattabs button[aria-pressed="true"]{background:#E7F3FF;color:#0866FF}
+.chattabs button:hover{background:#F0F2F5}
+.chatlist{flex:1;overflow-y:auto;padding:0 8px 6px;min-height:80px}
+.chatrow{display:grid;grid-template-columns:56px minmax(0,1fr) 14px;gap:12px;align-items:center;width:100%;border:0;background:none;text-align:left;padding:8px;border-radius:10px;cursor:pointer}
+.chatrow:hover{background:#F2F2F2}
+.chatrow .dmav img{width:56px;height:56px}
+.chatrow b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatrow small{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chatrow.unread b,.chatrow.unread small{font-weight:800;color:var(--ink)}
+.chatrow .udot{width:12px;height:12px;border-radius:50%;background:#0866FF}
+.chatempty{padding:22px 16px;text-align:center;color:var(--muted);font-size:14.5px}
+.chatfoot{border-top:1px solid #E4E6EB;padding:10px;text-align:center}
+.chatfoot button{border:0;background:none;color:#0866FF;font-weight:600;font-size:15px;cursor:pointer}
+.chatfoot button:hover{text-decoration:underline}
+.srcline{font-size:12.5px;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.srcline .lit{font-weight:600}
+.ssrc{display:block;margin-top:auto;padding-top:6px;font-size:11px;opacity:.85;font-weight:600}
+.tksrc{opacity:.7;font-size:.9em}
 #navFriends .frcount{position:absolute;top:-4px;right:-6px;min-width:19px;height:19px;padding:0 5px;background:#E41E3F;color:#fff;border:2px solid #fff;border-radius:999px;font:800 11px/15px var(--f-body);display:inline-flex;align-items:center;justify-content:center}
 .fbright .bell .bellbtn{width:40px;height:40px;border-radius:50%;background:#E4E6EB;border:0;filter:none;opacity:1;color:var(--ink)}
 .fbright .bell.lit .bellbtn{background:#E4E6EB;box-shadow:none}
@@ -1049,7 +1078,7 @@ b.ulink:hover,.nm.ulink:hover{text-decoration:underline}
     <div class="fbright">
       <button class="fbicon" type="button" id="helpBtn" aria-label="Help" data-tip="Help">?</button>
       <button class="fbicon" type="button" id="navFriends" hidden aria-label="Friend requests" data-tip="Friend requests">👥</button>
-      <button class="fbicon" type="button" id="navMsg" hidden aria-label="Messages" data-tip="Messages">💬</button>
+      <div class="chatwrap" id="chatWrap"><button class="fbicon" type="button" id="navMsg" hidden aria-label="Messages" data-tip="Messages">💬</button><div class="chatpop" id="chatMenu" hidden></div></div>
       <div class="bell" id="bell" hidden></div>
       <button class="btn primary small" type="button" id="signInBtn" hidden>Sign in</button>
       <div class="mewrap" id="meWrap"><button class="fbme" type="button" id="meBtn" hidden aria-label="Account" data-tip="Your account"><img id="meImg" alt=""></button><div class="memenu" id="meMenu" hidden></div></div>
@@ -1302,20 +1331,22 @@ function saveRf(){ try{ localStorage.setItem('irtc-rf',JSON.stringify({src:[...r
 function radarItems(){
   const out=[];
   for(const p of PUBS.items) out.push({src:'paper',date:p.date,title:decode(p.title),url:'https://pubmed.ncbi.nlm.nih.gov/'+p.pmid+'/',
-    sub:[el('i',{text:p.journal}),' · '+firstAu(p)+' · '+(p.types||[]).join(', ')], extra:[p.doi?ext('https://doi.org/'+p.doi,'Full text'):null, el('button',{class:'cite',type:'button',onclick:()=>copyCite(p)},'Cite')], text:p.title+' '+p.journal});
+    sub:[el('i',{text:p.journal}),' · '+firstAu(p)+' · '+(p.types||[]).join(', ')], extra:[p.doi?ext('https://doi.org/'+p.doi,'Full text'):null, el('button',{class:'cite',type:'button',onclick:()=>copyCite(p)},'Cite')], text:p.title+' '+p.journal, source:{name:(p.journal||'Journal')+', via PubMed',ref:'PMID '+p.pmid,url:'https://pubmed.ncbi.nlm.nih.gov/'+p.pmid+'/'}});
   for(const p of (SLEUTH.preprints||[])) out.push({src:'preprint',date:p.date,title:p.title,url:p.url,
-    sub:[p.server+' · '+(p.first?p.first+(p.nauth>1?', et al.':''):'')], warn:'Preprint · not peer-reviewed', abstract:p.abstract, text:p.title+' '+(p.abstract||'')});
+    sub:[p.server+' · '+(p.first?p.first+(p.nauth>1?', et al.':''):'')], warn:'Preprint · not peer-reviewed', abstract:p.abstract, text:p.title+' '+(p.abstract||''), source:{name:(p.server||'Preprint server')+', via Europe PMC',ref:p.doi?'DOI '+p.doi:'',url:p.url}});
   for(const t of TRIALS){
     const base={title:t.title,url:'https://clinicaltrials.gov/study/'+t.nct,text:t.title+' '+t.therapies.join(' ')+' '+(t.summary||''),
-      sub:[t.nct+' · '+(STATUS[t.status]?.[0]||t.status)+(t.phase.length?' · '+t.phase.join('/'):'')+' · '+t.sponsor], chips:t.therapies.slice(0,5), spec:t.specific};
+      sub:[t.nct+' · '+(STATUS[t.status]?.[0]||t.status)+(t.phase.length?' · '+t.phase.join('/'):'')+' · '+t.sponsor], chips:t.therapies.slice(0,5), spec:t.specific, source:{name:'ClinicalTrials.gov (U.S. National Library of Medicine)',ref:t.nct,url:'https://clinicaltrials.gov/study/'+t.nct}};
     if(!t.specific) continue;
     if(isRecent(t.firstPosted,365)) out.push({...base,src:'newtrial',date:t.firstPosted});
     else if(t.lastUpdate&&t.specific) out.push({...base,src:'trialupd',date:t.lastUpdate});
   }
   for(const g of (SLEUTH.grants||[])) if(g.notice) out.push({src:'grant',date:g.notice,title:g.title,url:g.url,
-    sub:[(g.pis||[]).join(', ')+' · '+g.org+(g.city?', '+g.city:'')], money:money(g.amount)+(g.fy?' · FY'+g.fy:'')+(g.ic?' · '+g.ic:''), text:g.title+' '+g.org});
+    sub:[(g.pis||[]).join(', ')+' · '+g.org+(g.city?', '+g.city:'')], money:money(g.amount)+(g.fy?' · FY'+g.fy:'')+(g.ic?' · '+g.ic:''), text:g.title+' '+g.org, source:{name:'NIH RePORTER (U.S. federal grants database)',ref:g.num||'',url:g.url}});
   return out;
 }
+const SRC_SHORT={paper:'PubMed',preprint:'Europe PMC',newtrial:'ClinicalTrials.gov',trialupd:'ClinicalTrials.gov',grant:'NIH RePORTER'};
+function srcLine(i){ const x=i&&i.source; if(!x||!x.url) return null; return el('div',{class:'srcline'}, el('span',{text:'Source: '}), el('a',{class:'lit',href:x.url,target:'_blank',rel:'noopener',text:x.name+(x.ref?' · '+x.ref:'')+' ↗'})); }
 const SRC_LABEL={paper:'Peer-reviewed paper',preprint:'Preprint',newtrial:'New trial',trialupd:'Trial updated',grant:'Federal grant'};
 
 function renderRadar(box){
@@ -1357,6 +1388,7 @@ function renderRadar(box){
           listenBtn(()=>SRC_LABEL[i.src]+'. '+fmtDate(i.date)+'. '+i.title+'. '+i.sub.map(x=>typeof x==='string'?x:x.textContent).join(' ')+(i.money?'. '+i.money:'')+(i.abstract?'. Abstract: '+i.abstract:''))),
         el('a',{class:'rtitle',href:i.url,target:'_blank',rel:'noopener',text:i.title}),
         el('div',{class:'rsub'},...i.sub),
+        srcLine(i),
         i.chips&&i.chips.length?el('div',{class:'chips',style:'margin-top:6px'},...i.chips.map(c=>el('span',{class:'chip',text:c}))):null,
         i.abstract?el('details',null,el('summary',{text:'Abstract excerpt'}),el('p',{text:i.abstract+(i.abstract.length>=600?'…':'')})):null,
         i.extra?el('div',{class:'ml'},...i.extra):null)))
@@ -1448,7 +1480,8 @@ function renderGrants(box){
       el('div',{style:'min-width:0'},
         el('a',{class:'rtitle',href:g.url,target:'_blank',rel:'noopener',text:g.title}),
         el('div',{class:'rsub'}, el('b',{text:(g.pis||[]).join(', ')}), ' · '+g.org+(g.city?', '+g.city:'')),
-        el('div',{class:'gmeta'}, g.amount?el('span',{class:'rmoney',text:money(g.amount)+(g.fy?' (FY'+g.fy+')':'')}):null, el('span',{text:g.num}), g.ic?el('span',{text:'Funder: '+g.ic}):null, g.end?el('span',{text:'Runs to '+fmtDate(g.end)}):null))))));
+        el('div',{class:'gmeta'}, g.amount?el('span',{class:'rmoney',text:money(g.amount)+(g.fy?' (FY'+g.fy+')':'')}):null, el('span',{text:g.num}), g.ic?el('span',{text:'Funder: '+g.ic}):null, g.end?el('span',{text:'Runs to '+fmtDate(g.end)}):null),
+        srcLine({source:{name:'NIH RePORTER (U.S. federal grants database)',ref:g.num||'',url:g.url}}))))));
 }
 
 function renderPriorities(box){
@@ -2364,7 +2397,7 @@ async function openDm(uid){
   await ensureKeys(); if(!dmKeys){ toast('Messages are unavailable right now. Try again in a moment.'); return; }
   dmOpen={uid:uid||null,q:''}; renderDmPanel();
 }
-async function renderDmList(){ if(dmOpen) renderDmPanel(); else updateDmBadge(); }
+async function renderDmList(){ if(dmOpen) renderDmPanel(); else updateDmBadge(); if(chatOpen){ const f=document.activeElement&&document.activeElement.classList.contains('chatsearch'); if(!f) renderChatMenu(); } }
 async function renderDmPanel(){
   let r=document.getElementById('dmRoot'); if(!r){ r=el('div',{id:'dmRoot'}); document.body.append(r); }
   if(!dmOpen){ r.replaceChildren(); return; }
@@ -2608,7 +2641,7 @@ function renderTicker(){
   const sig=items.map(i=>i.url).join('|'); if(sig===tickSig) return; tickSig=sig;
   if(!items.length){ box.hidden=true; return; } box.hidden=false;
   const mk=()=>items.map(i=>{ const d=toDate(i.date); const dl=d?d.getUTCDate()+' '+MON3[d.getUTCMonth()]:'';
-    return el('a',{class:'tkitem',href:i.url,target:'_blank',rel:'noopener'}, el('span',{class:'tktag t-'+i.src,text:TICK_LABEL[i.src]}), el('span',{class:'tkdate',text:dl}), i.title.length>110?i.title.slice(0,108)+'…':i.title); });
+    return el('a',{class:'tkitem',href:i.url,target:'_blank',rel:'noopener'}, el('span',{class:'tktag t-'+i.src,text:TICK_LABEL[i.src]}), el('span',{class:'tkdate',text:dl}), i.title.length>110?i.title.slice(0,108)+'…':i.title, el('span',{class:'tksrc',text:' · '+SRC_SHORT[i.src]})); });
   const track=el('div',{class:'tktrack'}, ...mk(), ...mk().map(a=>{ a.setAttribute('aria-hidden','true'); a.tabIndex=-1; return a; }));
   track.style.setProperty('--tkdur',Math.max(90,items.length*16)+'s');
   setKids(box, el('div',{class:'wrap tkwrap'}, el('span',{class:'tklabel'}, el('i'), 'LATEST AT/RT'), el('div',{class:'tkview'}, track)));
@@ -2811,7 +2844,7 @@ function feedCard(x){
       el('div',{class:'fhead'}, el('span',{class:'srcico',style:'background:'+ic[1],text:ic[0]}),
         el('div',{style:'min-width:0'}, el('b',{text:SRC_LABEL[i.src]}), el('small',{text:fmtDate(i.date)+(i.money?' · '+i.money:'')}))),
       i.warn?el('div',{class:'rwarn',text:i.warn}):null,
-      el('a',{class:'ftitle lnk',href:i.url,target:'_blank',rel:'noopener',text:i.title}), el('div',{class:'fsub',text:sub}),
+      el('a',{class:'ftitle lnk',href:i.url,target:'_blank',rel:'noopener',text:i.title}), el('div',{class:'fsub',text:sub}), srcLine(i),
       i.chips&&i.chips.length?el('div',{class:'chips',style:'margin-top:6px'},...i.chips.map(c=>el('span',{class:'chip',text:c}))):null,
       fbActions('r:'+i.url,{id:'r:'+i.url,title:i.title,url:i.url,kind:SRC_LABEL[i.src]},()=>openCompose('general','Re: '+i.title.slice(0,140),i.url+'\n\n'),'Discuss')); }
   if(x.kind==='meeting'){ const m=x.m, w=who(m.uid);
@@ -2837,7 +2870,7 @@ function renderStrip(box){
   its=its.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10);
   if(!its.length){ setKids(box); return; }
   const row=el('div',{class:'strip'},...its.map(i=>{ const ic=SRC_ICON[i.src]||['•','#666'];
-    return el('a',{class:'scard',href:i.url,target:'_blank',rel:'noopener',style:'--c:'+ic[1]}, el('span',{class:'stag',text:SRC_LABEL[i.src]}), el('span',{class:'sdate',text:fmtDate(i.date)}), el('span',{class:'stitle',text:i.title})); }));
+    return el('a',{class:'scard',href:i.url,target:'_blank',rel:'noopener',style:'--c:'+ic[1]}, el('span',{class:'stag',text:SRC_LABEL[i.src]}), el('span',{class:'sdate',text:fmtDate(i.date)}), el('span',{class:'stitle',text:i.title}), el('span',{class:'ssrc',text:'Source: '+(i.src==='paper'&&i.source?i.source.name.replace(', via PubMed','')+' · PubMed':SRC_SHORT[i.src])})); }));
   const scroll=d=>row.scrollBy({left:d*row.clientWidth*0.8,behavior:'smooth'});
   setKids(box, el('div',{class:'stripwrap'}, el('div',{class:'striphead'}, el('b',{text:'Fresh this month'}), el('span',null, el('button',{class:'sarrow',type:'button','aria-label':'Scroll left',onclick:()=>scroll(-1)},'‹'), el('button',{class:'sarrow',type:'button','aria-label':'Scroll right',onclick:()=>scroll(1)},'›'))), row));
 }
@@ -3249,7 +3282,46 @@ document.getElementById('gsearch').addEventListener('input',e=>runSearch(e.targe
 document.getElementById('gsearch').addEventListener('focus',e=>runSearch(e.target.value));
 showView((()=>{ try{ return localStorage.getItem('irtc-view')||'home'; }catch(e){ return 'home'; } })(),{noScroll:true});
 document.getElementById('dmFab').addEventListener('click',()=>openDm(null));
-document.getElementById('navMsg').addEventListener('click',()=>openDm(null));
+let chatOpen=false, chatTab='all', chatQ='', chatBusy=0;
+document.getElementById('navMsg').addEventListener('click',e=>{ e.stopPropagation(); chatOpen=!chatOpen; if(chatOpen){ chatQ=''; meOpen=false; try{ renderMeMenu(); }catch(x){} } renderChatMenu(); });
+document.addEventListener('click',e=>{ if(chatOpen&&!e.target.closest('#chatWrap')){ chatOpen=false; renderChatMenu(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&chatOpen){ chatOpen=false; renderChatMenu(); } });
+async function renderChatMenu(){
+  const host=document.getElementById('chatMenu'); if(!host) return;
+  if(!chatOpen){ host.hidden=true; return; } host.hidden=false;
+  const go=u=>{ chatOpen=false; renderChatMenu(); openDm(u); };
+  const head=el('div',{class:'chathead'}, el('h3',{text:'Chats'}), el('div',{class:'acts'},
+    el('button',{type:'button','aria-label':'Open full Messenger','data-tip':'Open Messenger',onclick:()=>go(null)},'⤢'),
+    el('button',{type:'button','aria-label':'New message','data-tip':'New message',onclick:()=>go(null)},'✏️')));
+  const search=el('input',{class:'chatsearch',type:'search',placeholder:'Search Messenger','aria-label':'Search Messenger',value:chatQ});
+  const tabs=el('div',{class:'chattabs'}, ...[['all','All'],['unread','Unread']].map(([k,t])=>el('button',{type:'button','aria-pressed':String(chatTab===k),onclick:()=>{ chatTab=k; renderChatMenu(); }},t)));
+  const list=el('div',{class:'chatlist'}, el('div',{class:'chatempty',text:'Loading chats…'}));
+  const foot=el('div',{class:'chatfoot'}, el('button',{type:'button',onclick:()=>go(null)},'See all in Messenger'));
+  setKids(host, head, search, tabs, list, foot);
+  const rows=[];
+  search.addEventListener('input',()=>{ chatQ=search.value; fill(); });
+  if(!canParticipate()){ setKids(list, el('div',{class:'chatempty',text:'Finish your profile to start messaging.'})); return; }
+  const my=++chatBusy;
+  await ensureKeys(); if(!dmKeys){ setKids(list, el('div',{class:'chatempty',text:'Messages are unavailable right now. Try again in a moment.'})); return; }
+  const sums=await convoSummaries(); await resolve(sums.map(x=>x.u));
+  for(const c of sums){ if(!c.last) continue; const msgs=await decryptConvo(c.u); const m=msgs[msgs.length-1];
+    rows.push({...c, preview:m?((m.from===me.id?'You: ':'')+m.text.replace(/\s+/g,' ')):'' }); }
+  if(my!==chatBusy) return;
+  rows.sort((a,b)=>b.last-a.last);
+  function fill(){
+    const q=chatQ.trim().toLowerCase();
+    const shown=rows.filter(r=>(chatTab!=='unread'||r.unread)&&(!q||(who(r.u).name||'').toLowerCase().includes(q)||r.preview.toLowerCase().includes(q)));
+    if(!shown.length){
+      setKids(list, el('div',{class:'chatempty'}, rows.length?(chatTab==='unread'?'No unread messages.':'No chats match your search.'):'No conversations yet.',
+        rows.length?null:el('div',{style:'margin-top:10px'}, el('button',{class:'btn primary small',type:'button',onclick:()=>go(null)},'✏️ Start a conversation'))));
+      return; }
+    setKids(list, ...shown.map(r=>el('button',{class:'chatrow'+(r.unread?' unread':''),type:'button',onclick:()=>go(r.u)},
+      el('span',{class:'dmav'}, el('img',{src:profiles[r.u]?.avatarUrl||'',alt:''}), onlineDot(r.u)),
+      el('span',null, el('b',{text:who(r.u).name}), el('small',{text:(r.preview.length>60?r.preview.slice(0,60)+'…':r.preview)+' · '+timeAgo(r.last)})),
+      r.unread?el('i',{class:'udot','aria-label':r.unread+' unread'}):el('span'))));
+  }
+  fill();
+}
 document.getElementById('askFab').addEventListener('click',()=>renderAsk());
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.querySelector('#askRoot .askpanel')) closeAsk(); });
 startAsk();
