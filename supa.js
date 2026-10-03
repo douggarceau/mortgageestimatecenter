@@ -42,6 +42,20 @@
       const { data, error } = await sb.from('join_requests').select('*').order('created_at', { ascending:false }).limit(500);
       if(error) throw error; return data || [];
     },
+    // Photos and videos for posts live in the private 'media' storage bucket.
+    upload: async (file, name) => {
+      const s = await sessionReady; if(!s) throw new Error('Not signed in');
+      const safe = String(name || file.name || 'file').replace(/[^\w.-]+/g, '_').slice(-60);
+      const path = s.user.id + '/' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + '-' + safe;
+      const { error } = await sb.storage.from('media').upload(path, file, { contentType:file.type || 'application/octet-stream', upsert:false });
+      if(error) throw error; return path;
+    },
+    mediaUrl: (() => { const cache = {}; return async (path) => {
+      const hit = cache[path]; if(hit && hit.exp > Date.now()) return hit.url;
+      const { data, error } = await sb.storage.from('media').createSignedUrl(path, 3600 * 6);
+      if(error) throw error; cache[path] = { url:data.signedUrl, exp:Date.now() + 3600 * 5 * 1000 }; return data.signedUrl;
+    }; })(),
+    removeMedia: async (paths) => { if(paths && paths.length) await sb.storage.from('media').remove(paths); },
     decide: async (uid, status) => {
       const { error } = await sb.from('join_requests').update({ status, decided_at:new Date().toISOString() }).eq('uid', uid);
       if(error) throw error;
