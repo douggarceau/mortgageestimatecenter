@@ -751,6 +751,7 @@ main.wrap{max-width:1360px}
 .fbicon:hover{background:#D8DADF}
 #navMsg .newlight{position:absolute;top:-4px;right:-6px;margin:0;padding:0 5px;min-width:19px;height:19px;justify-content:center;background:#E41E3F;color:#fff;border:2px solid #fff;border-radius:999px;font:800 11px/15px var(--f-body);letter-spacing:0}
 #navMsg .newlight i{display:none}
+#navFriends .frcount{position:absolute;top:-4px;right:-6px;min-width:19px;height:19px;padding:0 5px;background:#E41E3F;color:#fff;border:2px solid #fff;border-radius:999px;font:800 11px/15px var(--f-body);display:inline-flex;align-items:center;justify-content:center}
 .fbright .bell .bellbtn{width:40px;height:40px;border-radius:50%;background:#E4E6EB;border:0;filter:none;opacity:1;color:var(--ink)}
 .fbright .bell.lit .bellbtn{background:#E4E6EB;box-shadow:none}
 .fbright .bell.urgent .bellbtn{background:#FFE3CC}
@@ -1047,6 +1048,7 @@ b.ulink:hover,.nm.ulink:hover{text-decoration:underline}
     </nav>
     <div class="fbright">
       <button class="fbicon" type="button" id="helpBtn" aria-label="Help" data-tip="Help">?</button>
+      <button class="fbicon" type="button" id="navFriends" hidden aria-label="Friend requests" data-tip="Friend requests">👥</button>
       <button class="fbicon" type="button" id="navMsg" hidden aria-label="Messages" data-tip="Messages">💬</button>
       <div class="bell" id="bell" hidden></div>
       <button class="btn primary small" type="button" id="signInBtn" hidden>Sign in</button>
@@ -2911,6 +2913,7 @@ function runSearch(q){
 function renderMe(){
   const img=document.getElementById('meImg'); if(img){ img.src=(me&&me.avatarUrl)||''; img.alt=(me&&me.name)||'Account'; }
   const b=document.getElementById('meBtn'); if(b) b.hidden=!(me&&me.id);
+  const fr=document.getElementById('navFriends'); if(fr){ const ok=canParticipate(); fr.hidden=!ok; let n=0; try{ n=ok?incomingRequests().length:0; }catch(e){} const old=fr.querySelector('.frcount'); if(old) old.remove(); if(n) fr.append(el('span',{class:'frcount',text:n>9?'9+':String(n)})); fr.setAttribute('aria-label',n?`Friend requests, ${n} waiting`:'Friend requests'); fr.dataset.tip=n?`${n} friend request${n>1?'s':''}`:'Friends'; }
   const si=document.getElementById('signInBtn'); if(si){ si.hidden=!(loadDone&&!(me&&me.id)&&window.irtcAuth); const st=window.irtcAuth&&window.irtcAuth.status; si.textContent=(st==='pending'||st==='none'||st==='denied')?'⏳ Request pending':'Sign in'; }
 }
 let meOpen=false;
@@ -3295,6 +3298,7 @@ function openSetPassword(){
     try{ await window.irtcAuth.setPassword(pw.value); history.replaceState(null,'',location.pathname); closeModal(); toast('Password saved'); }catch(x){ err.textContent='Could not save: '+(x.message||'try again'); } });
   showModal(f,false);
 }
+document.getElementById('navFriends').addEventListener('click',()=>{ if(!me||!me.id) return; profileUid=me.id; profileTab='connections'; showView('profile'); renderProfilePage(); });
 document.getElementById('signInBtn').addEventListener('click',()=>{ const st=window.irtcAuth&&window.irtcAuth.status; if(st==='pending'||st==='none'||st==='denied') openPending(); else openSignIn(); });
 function joinFields(){
   const nm=el('input',{id:'jr-name',required:true,maxlength:80,autocomplete:'name',placeholder:'Full name (e.g. Dr. Jane Smith)','aria-label':'Full name'});
