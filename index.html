@@ -821,6 +821,12 @@ main.wrap{max-width:1360px}
 .pweye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:#F0F2F5;border-radius:999px;padding:6px 12px;font:600 13.5px var(--f-body);color:#1C1E21;cursor:pointer}
 .pweye:hover{background:#E4E6EB}
 .bellsec{font:700 16px var(--f-body);color:#1C1E21;padding:10px 8px 4px}
+.sndrow{display:grid;grid-template-columns:32px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #EEF0F2}
+.sndico{font-size:22px;text-align:center}
+.sndtxt b{display:block;font-size:15px}.sndtxt small{color:#65676B;font-size:12.5px}
+.sndsel{border:1px solid #CED0D4;border-radius:8px;padding:7px 8px;font:inherit;font-size:14px;background:#fff;max-width:190px}
+.sndsel.wide{grid-column:3 / span 2;max-width:260px}
+.sndvol{grid-column:3 / span 2;width:200px}
 .fbname{flex:none;min-width:0}
 .fbname b{font-family:var(--f-body)!important;font-weight:900!important;color:#1877F2!important;font-size:27px!important;letter-spacing:-.5px;line-height:1}
 .fbname span{color:#1C1E21!important;font-weight:700!important;font-size:12.5px!important;margin-top:3px}
@@ -2453,9 +2459,55 @@ async function convoSummaries(){
     res.push({u,last,unread}); }
   return res;
 }
+/* ---------- sounds & alerts ---------- */
+let mailPrimed=false, soundLast={};
+const SOUND_DEF={mail:'voice',friend:'voice',bell:'chime',voice:'',volume:0.8};
+const SOUND_INFO={
+  mail:{icon:'📬',label:'New message',say:'You’ve got mail!',toast:'📬 You’ve got mail!',notes:[[659.25,0],[880,0.14]]},
+  friend:{icon:'🧑‍🤝‍🧑',label:'Friend request',say:'You’ve got a friend request!',toast:'🧑‍🤝‍🧑 You’ve got a friend request!',notes:[[523.25,0],[659.25,0.12],[783.99,0.24]]},
+  bell:{icon:'🔔',label:'Other notifications',say:'You have a new notification.',toast:'🔔 New notification',notes:[[1046.5,0]]}
+};
+function soundPrefs(){ try{ const x=JSON.parse(localStorage.getItem('irtc-sounds')||'null'); if(x) return {...SOUND_DEF,...x}; if(localStorage.getItem('irtc-mailvoice')==='off') return {...SOUND_DEF,mail:'off'}; }catch(e){} return {...SOUND_DEF}; }
+function saveSoundPrefs(p){ try{ localStorage.setItem('irtc-sounds',JSON.stringify(p)); }catch(e){} }
+function chime(notes,vol){ try{ const C=window.AudioContext||window.webkitAudioContext; if(!C) return; const ac=new C(); const t=ac.currentTime;
+  notes.forEach(([f,d])=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(Math.max(0.02,0.3*vol),t+d+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d+0.4); o.connect(g).connect(ac.destination); o.start(t+d); o.stop(t+d+0.45); });
+  setTimeout(()=>{ try{ ac.close(); }catch(e){} },1500); }catch(e){} }
+function englishVoices(){ try{ return (speechSynthesis.getVoices()||[]).filter(v=>/^en/i.test(v.lang)); }catch(e){ return []; } }
+function sayText(text,prefs){ try{ if(!window.speechSynthesis) return; const u=new SpeechSynthesisUtterance(text); u.rate=0.95; u.pitch=1.05; u.volume=prefs.volume;
+  const vs=englishVoices(); const v=(prefs.voice&&vs.find(x=>x.name===prefs.voice))||vs.find(x=>/en[-_]US/i.test(x.lang))||vs[0]; if(v) u.voice=v;
+  speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
+function playSound(kind,test){
+  const info=SOUND_INFO[kind]; if(!info) return; const prefs=soundPrefs(); const mode=prefs[kind]||'off';
+  if(!test){ if(Date.now()-(soundLast[kind]||0)<8000) return; soundLast[kind]=Date.now(); toast(info.toast); }
+  if(mode==='off') return;
+  chime(info.notes,prefs.volume);
+  if(mode==='voice') setTimeout(()=>sayText(info.say,prefs),info.notes.length*130+250);
+}
+function gotMail(){ playSound('mail'); }
+try{ if(window.speechSynthesis) speechSynthesis.onvoiceschanged=()=>{}; }catch(e){}
+function soundsSection(){
+  const p=soundPrefs();
+  const row=kind=>{ const i=SOUND_INFO[kind];
+    const sel=el('select',{class:'sndsel','aria-label':i.label}, ...(kind==='bell'?[['chime','Chime'],['voice','Voice'],['off','Off']]:[['voice','Voice + chime'],['chime','Chime only'],['off','Off']]).map(([v,l])=>el('option',{value:v,selected:p[kind]===v},l)));
+    sel.addEventListener('change',()=>{ const q=soundPrefs(); q[kind]=sel.value; saveSoundPrefs(q); });
+    return el('div',{class:'sndrow'}, el('span',{class:'sndico',text:i.icon}), el('span',{class:'sndtxt'}, el('b',{text:i.label}), el('small',{text:'“'+i.say+'”'})), sel,
+      el('button',{class:'btn small',type:'button',onclick:()=>playSound(kind,true)},'▶ Test'));
+  };
+  const vsel=el('select',{class:'sndsel wide','aria-label':'Voice'}, el('option',{value:''},'Automatic'));
+  const fillVoices=()=>{ const cur=soundPrefs().voice; setKids(vsel, el('option',{value:''},'Automatic'), ...englishVoices().map(v=>el('option',{value:v.name,selected:v.name===cur},v.name+' ('+v.lang+')'))); };
+  fillVoices(); try{ speechSynthesis.addEventListener('voiceschanged',fillVoices); }catch(e){}
+  vsel.addEventListener('change',()=>{ const q=soundPrefs(); q.voice=vsel.value; saveSoundPrefs(q); sayText('Hello! This is my voice.',q); });
+  const vol=el('input',{type:'range',min:'0.1',max:'1',step:'0.1',value:String(p.volume),'aria-label':'Volume',class:'sndvol'});
+  vol.addEventListener('change',()=>{ const q=soundPrefs(); q.volume=Number(vol.value); saveSoundPrefs(q); playSound('mail',true); });
+  return el('div',{class:'setsec',id:'soundsSec'}, el('h4',{text:'Sounds & alerts 🔊'}),
+    row('mail'), row('friend'), row('bell'),
+    el('div',{class:'sndrow'}, el('span',{class:'sndico',text:'🗣️'}), el('span',{class:'sndtxt'}, el('b',{text:'Voice'}), el('small',{text:'Pick who says it. You’ll hear a sample.'})), vsel),
+    el('div',{class:'sndrow'}, el('span',{class:'sndico',text:'🔉'}), el('span',{class:'sndtxt'}, el('b',{text:'Volume'})), vol),
+    el('p',{class:'hintline',text:'Sounds play while the site is open. Your browser may stay quiet until you’ve clicked somewhere on the page once.'}));
+}
 async function updateDmBadge(){
   const b=document.getElementById('dmBadge'); if(!b||!canParticipate()||!dmKeys) return;
-  const sums=await convoSummaries(); unreadBy=Object.fromEntries(sums.map(c=>[c.u,c.unread])); const n=sums.reduce((a,c)=>a+c.unread,0); lastUnread=n; try{ renderBell(); }catch(e){}
+  const sums=await convoSummaries(); unreadBy=Object.fromEntries(sums.map(c=>[c.u,c.unread])); const n=sums.reduce((a,c)=>a+c.unread,0); const prevUnread=mailPrimed?lastUnread:0; lastUnread=n; if(n>prevUnread) gotMail(); mailPrimed=true; try{ renderBell(); }catch(e){}
   b.textContent=n?String(n):''; b.hidden=!n;
   const fab=document.getElementById('dmFab'); if(fab){ fab.classList.toggle('unread',!!n); fab.setAttribute('aria-label',n?`Messages, ${n} unread`:'Open messages'); }
   const nav=document.getElementById('navMsg'); if(nav){ nav.hidden=!canParticipate(); const old=nav.querySelector('.newlight'); if(old) old.remove(); if(n) nav.append(el('span',{class:'newlight'},el('i'),n+' NEW')); }
@@ -2894,6 +2946,7 @@ function renderBell(){
   const host=document.getElementById('bell'); if(!host) return;
   if(!canParticipate()){ host.hidden=true; return; } host.hidden=false;
   const ev=bellList(); const unread=ev.filter(x=>x.unread).length; const urgent=ev.some(x=>x.urgent);
+  { const other=ev.filter(x=>x.unread&&!/sent you|wants to connect/.test(bellPlain(bellParts(x.text)))).length; if(dataReady&&window._bellPrev!=null&&other>window._bellPrev) playSound('bell'); if(dataReady) window._bellPrev=other; }
   host.className='bell'+(urgent?' urgent':unread?' lit':'');
   const btn=el('button',{class:'bellbtn',type:'button','data-label':'Alerts','aria-label':unread?`Notifications, ${unread} new`:'Notifications','aria-expanded':String(bellOpen),
     onclick:e=>{ e.stopPropagation(); bellOpen=!bellOpen; renderBell(); }}, '🔔', unread?el('span',{class:'bellcount',text:unread>9?'9+':unread}):null);
@@ -3216,7 +3269,7 @@ function runSearch(q){
 function renderMe(){
   const img=document.getElementById('meImg'); if(img){ img.src=(me&&me.avatarUrl)||''; img.alt=(me&&me.name)||'Account'; }
   const b=document.getElementById('meBtn'); if(b) b.hidden=!(me&&me.id);
-  const fr=document.getElementById('navFriends'); if(fr){ const ok=canParticipate(); fr.hidden=!ok; let n=0; try{ n=ok?incomingRequests().length:0; }catch(e){} const old=fr.querySelector('.frcount'); if(old) old.remove(); if(n) fr.append(el('span',{class:'frcount',text:n>9?'9+':String(n)})); fr.setAttribute('aria-label',n?`Friend requests, ${n} waiting`:'Friend requests'); fr.dataset.label=n?'Requests':'Friends'; }
+  const fr=document.getElementById('navFriends'); if(fr){ const ok=canParticipate(); fr.hidden=!ok; let n=0; try{ n=ok?incomingRequests().length:0; }catch(e){} if(ok&&dataReady){ if(window._frPrev!=null&&n>window._frPrev) playSound('friend'); window._frPrev=n; } const old=fr.querySelector('.frcount'); if(old) old.remove(); if(n) fr.append(el('span',{class:'frcount',text:n>9?'9+':String(n)})); fr.setAttribute('aria-label',n?`Friend requests, ${n} waiting`:'Friend requests'); fr.dataset.label=n?'Requests':'Friends'; }
   const si=document.getElementById('signInBtn'); if(si){ si.hidden=!(loadDone&&!(me&&me.id)&&window.irtcAuth); const st=window.irtcAuth&&window.irtcAuth.status; si.textContent=(st==='pending'||st==='none'||st==='denied')?'⏳ Request pending':'Sign in'; }
 }
 let meOpen=false;
@@ -3233,6 +3286,7 @@ function renderMeMenu(){
     el('button',{class:'mmrow',type:'button',onclick:()=>{ meOpen=false; renderMeMenu(); openSettings(); }},'🔒 Settings & privacy'),
     el('button',{class:'mmrow',type:'button',onclick:()=>{ meOpen=false; renderMeMenu(); openForm(); }},'📌 Post a project'),
     el('button',{class:'mmrow',type:'button',onclick:()=>{ meOpen=false; renderMeMenu(); openSaved(); }},'🔖 Saved'),
+    el('button',{class:'mmrow',type:'button',onclick:()=>{ meOpen=false; renderMeMenu(); openSettings(); setTimeout(()=>{ const x=document.getElementById('soundsSec'); if(x) x.scrollIntoView({block:'start'}); },60); }},'🔊 Sounds & alerts'),
     el('button',{class:'mmrow',type:'button',onclick:()=>{ meOpen=false; renderMeMenu(); openHelp(); }},'❓ Help & FAQ'),
     window.irtcAuth?el('button',{class:'mmrow',type:'button',onclick:()=>{ meOpen=false; window.irtcAuth.signOut(); }},'🚪 Sign out'):null);
 }
@@ -3365,6 +3419,7 @@ function openSettings(){
   const sw=(id,label,sub,checked)=>el('label',{class:'swrow'}, el('span',null, el('b',{text:label}), sub?el('small',{text:sub}):null), el('input',{type:'checkbox',id,checked,class:'sw'}), el('i',{class:'swtrack'}));
   const f=el('form',{class:'modal setmodal',role:'dialog','aria-modal':'true'},
     el('h3',{text:'Settings & privacy 🔒'}),
+    soundsSection(),
     el('div',{class:'setsec'}, el('h4',{text:'Activity'}),
       sw('s-online','Show me as “Online now”','Turn off and nobody sees your green dot',m.online!==false),
       sw('s-suggest','Show me in “People you may know”','Lets other members discover you',pv.suggest!==false)),
