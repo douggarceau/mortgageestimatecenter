@@ -816,6 +816,10 @@ main.wrap{max-width:1360px}
 .backwhere{font:700 18px var(--f-body);color:#1C1E21;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .backhome{border:0;background:none;color:#0866FF;font:600 15px var(--f-body);cursor:pointer;padding:8px 10px;border-radius:8px}
 .backhome:hover{background:#F0F2F5}
+.pwwrap{position:relative;display:block}
+.pwwrap input{width:100%;padding-right:96px!important}
+.pweye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:#F0F2F5;border-radius:999px;padding:6px 12px;font:600 13.5px var(--f-body);color:#1C1E21;cursor:pointer}
+.pweye:hover{background:#E4E6EB}
 .fbname{flex:none;min-width:0}
 @media (max-width:1150px) and (min-width:761px){.fbtab{min-width:70px;padding:0 8px}.fbright{gap:8px}}
 .fbname span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:190px!important;line-height:1.15;display:block}
@@ -3551,6 +3555,11 @@ document.getElementById('speakStop').addEventListener('click',stopSpeak);
 window.addEventListener('pagehide',()=>{ try{ stopSpeak(); }catch(e){} });
 document.getElementById('helpLink').addEventListener('click',e=>{e.preventDefault();openHelp();});
 
+function pwWrap(inp){
+  const b=el('button',{class:'pweye',type:'button','aria-label':'Show password','aria-pressed':'false'},'👁 Show');
+  b.addEventListener('click',()=>{ const show=inp.type==='password'; inp.type=show?'text':'password'; b.textContent=show?'🙈 Hide':'👁 Show'; b.setAttribute('aria-label',show?'Hide password':'Show password'); b.setAttribute('aria-pressed',String(show)); inp.focus(); });
+  return el('div',{class:'pwwrap'},inp,b);
+}
 function signInButton(){ return window.irtcAuth?el('button',{class:'btn primary',type:'button',onclick:()=>openSignIn()},'Sign in'):null; }
 function openSignIn(){
   const err=el('span',{class:'err'});
@@ -3563,7 +3572,7 @@ function openSignIn(){
     el('h3',{id:'si-h',text:'Sign in to IRTC'}),
     el('p',{class:'sub',text:'For invited consortium members. Ask the webmaster if you need an invitation.'}),
     el('div',{class:'field'},el('label',{for:'si-email',text:'Email'}),em),
-    el('div',{class:'field'},el('label',{for:'si-pass',text:'Password'}),pw, el('div',null,forgot)),
+    el('div',{class:'field'},el('label',{for:'si-pass',text:'Password'}),pwWrap(pw), el('div',null,forgot)),
     el('div',{class:'actions'},err,linkBtn,go),
     el('p',{class:'hintline',style:'text-align:center;margin:4px 0 0'},'New here? ',el('button',{class:'cite',type:'button',onclick:()=>openJoinRequest()},'Request to join')));
   const busy=(b,t)=>{ go.disabled=linkBtn.disabled=b; if(t) err.textContent=t; };
@@ -3586,7 +3595,7 @@ function openSetPassword(){
   const pw=el('input',{type:'password',id:'sp-pass',autocomplete:'new-password',placeholder:'New password (at least 8 characters)','aria-label':'New password'});
   const f=el('form',{class:'modal',role:'dialog','aria-modal':'true'},
     el('h3',{text:'Choose a new password'}),
-    el('div',{class:'field'},pw),
+    el('div',{class:'field'},pwWrap(pw)),
     el('div',{class:'actions'},err,el('button',{class:'btn primary',type:'submit'},'Save password')));
   f.addEventListener('submit',async ev=>{ ev.preventDefault(); if(pw.value.length<8){ err.textContent='Use at least 8 characters.'; return; }
     try{ await window.irtcAuth.setPassword(pw.value); history.replaceState(null,'',location.pathname); closeModal(); toast('Password saved'); }catch(x){ err.textContent='Could not save: '+(x.message||'try again'); } });
@@ -3608,7 +3617,7 @@ function openJoinRequest(){
   const f=el('form',{class:'modal',role:'dialog','aria-modal':'true','aria-labelledby':'jr-h'},
     el('h3',{id:'jr-h',text:'Request to join IRTC'}),
     el('p',{class:'sub',text:'IRTC is for clinicians and researchers working on AT/RT. The webmaster reviews every request.'}),
-    ...J.nodes, el('div',{class:'field'},em), el('div',{class:'field'},pw),
+    ...J.nodes, el('div',{class:'field'},em), el('div',{class:'field'},pwWrap(pw)),
     el('div',{class:'actions'},err,el('button',{class:'btn ghost',type:'button',onclick:()=>openSignIn()},'Back to sign in'),go));
   f.addEventListener('submit',async ev=>{ ev.preventDefault(); err.textContent='';
     const info={name:J.nm.value.trim(),org:J.org.value.trim(),note:J.note.value.trim()}, e=em.value.trim();
