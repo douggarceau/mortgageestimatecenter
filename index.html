@@ -827,6 +827,18 @@ main.wrap{max-width:1360px}
 .sndsel{border:1px solid #CED0D4;border-radius:8px;padding:7px 8px;font:inherit;font-size:14px;background:#fff;max-width:190px}
 .sndsel.wide{grid-column:3 / span 2;max-width:260px}
 .sndvol{grid-column:3 / span 2;width:200px}
+.fbme img{border-radius:50%}
+.cropwrap{display:flex;flex-direction:column;align-items:center;gap:12px;margin:6px 0 4px}
+.cropstage{position:relative;overflow:hidden;border-radius:14px;background:#E4E6EB;touch-action:none;cursor:grab;user-select:none}
+.cropstage.dragging{cursor:grabbing}
+.cropimg{position:absolute;max-width:none!important;pointer-events:none;display:none}
+.cropstage.has .cropimg{display:block}
+.cropring{position:absolute;inset:6px;border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.5);outline:3px solid rgba(255,255,255,.9);pointer-events:none}
+.cropstage:not(.has) .cropring{box-shadow:none;outline:3px dashed #BCC0C4}
+.crophint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font:600 12.5px var(--f-body);padding:4px 10px;border-radius:999px;pointer-events:none;white-space:nowrap}
+.cropstage:not(.has) .crophint{display:none}
+.cropzrow{display:flex;align-items:center;gap:10px;width:min(300px,100%)}
+.cropzoom{flex:1}
 .fbname{flex:none;min-width:0}
 .fbname b{font-family:var(--f-body)!important;font-weight:900!important;color:#1877F2!important;font-size:27px!important;letter-spacing:-.5px;line-height:1}
 .fbname span{color:#1C1E21!important;font-weight:700!important;font-size:12.5px!important;margin-top:3px}
@@ -3388,25 +3400,48 @@ async function toAvatarData(file){
   let q=.85, data=c.toDataURL('image/jpeg',q); while(data.length>120000&&q>.4){ q-=.1; data=c.toDataURL('image/jpeg',q); }
   return data;
 }
+function makeCropper(S){
+  const img=el('img',{class:'cropimg',alt:'',draggable:false});
+  const stage=el('div',{class:'cropstage',style:`width:${S}px;height:${S}px`}, img, el('div',{class:'cropring'}), el('div',{class:'crophint',text:'Drag to reposition'}));
+  const zoom=el('input',{type:'range',min:'1',max:'4',step:'0.01',value:'1',class:'cropzoom','aria-label':'Zoom'});
+  let W=0,H=0,base=1,z=1,x=0,y=0,ready=false;
+  const clamp=()=>{ const dw=W*base*z, dh=H*base*z; const mx=Math.max(0,(dw-S)/2), my=Math.max(0,(dh-S)/2); x=Math.min(mx,Math.max(-mx,x)); y=Math.min(my,Math.max(-my,y)); };
+  const draw=()=>{ if(!ready) return; clamp(); const dw=W*base*z, dh=H*base*z; img.style.width=dw+'px'; img.style.height=dh+'px'; img.style.left=(S/2+x-dw/2)+'px'; img.style.top=(S/2+y-dh/2)+'px'; };
+  const load=src=>new Promise((res,rej)=>{ ready=false; const im=new Image(); im.onload=()=>{ W=im.naturalWidth; H=im.naturalHeight; base=Math.max(S/W,S/H); z=1; x=0; y=0; zoom.value='1'; img.src=src; ready=true; stage.classList.add('has'); draw(); res(); }; im.onerror=rej; im.src=src; });
+  let drag=null;
+  stage.addEventListener('pointerdown',e=>{ if(!ready) return; drag={px:e.clientX,py:e.clientY,x,y}; stage.setPointerCapture(e.pointerId); stage.classList.add('dragging'); });
+  stage.addEventListener('pointermove',e=>{ if(!drag) return; x=drag.x+(e.clientX-drag.px); y=drag.y+(e.clientY-drag.py); draw(); });
+  const end=()=>{ drag=null; stage.classList.remove('dragging'); };
+  stage.addEventListener('pointerup',end); stage.addEventListener('pointercancel',end);
+  stage.addEventListener('wheel',e=>{ if(!ready) return; e.preventDefault(); const nz=Math.min(4,Math.max(1,z*(e.deltaY<0?1.08:1/1.08))); x*=nz/z; y*=nz/z; z=nz; zoom.value=String(z); draw(); },{passive:false});
+  zoom.addEventListener('input',()=>{ const nz=Number(zoom.value); x*=nz/z; y*=nz/z; z=nz; draw(); });
+  const output=(O=320)=>{ if(!ready) return ''; const c=document.createElement('canvas'); c.width=O; c.height=O; const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,O,O);
+    const k=O/S, dw=W*base*z, dh=H*base*z; g.imageSmoothingQuality='high'; g.drawImage(img,(S/2+x-dw/2)*k,(S/2+y-dh/2)*k,dw*k,dh*k); return c.toDataURL('image/jpeg',0.86); };
+  const zoomRow=el('div',{class:'cropzrow'}, el('span',{text:'➖'}), zoom, el('span',{text:'➕'}));
+  return {stage,zoomRow,load,output,isReady:()=>ready};
+}
 function openPhotoPicker(){
   if(!canParticipate()){ toast('Complete your profile first.'); return; }
-  const cur=customPhoto(me.id); let data=cur?cur.data:'';
-  const prev=el('img',{class:'phprev',src:data||meBaseAvatar||me.avatarUrl||'',alt:'Preview'});
+  const cur=customPhoto(me.id); let picked=false;
+  const C=makeCropper(Math.min(300,window.innerWidth-80));
   const file=el('input',{type:'file',id:'ph-file',accept:'image/*',class:'phfile'});
   const err=el('span',{class:'err'});
+  if(cur&&cur.data) C.load(cur.data).catch(()=>{});
   file.addEventListener('change',async()=>{ const f=file.files&&file.files[0]; if(!f) return; err.textContent='';
     if(!/^image\//.test(f.type)){ err.textContent='Pick an image file.'; return; }
-    try{ data=await toAvatarData(f); prev.src=data; }catch(e){ err.textContent='Couldn’t read that image. Try a JPG or PNG.'; } });
-  const dur=el('div',{class:'phdur'},...[['1','24 hours'],['7','1 week'],['30','1 month'],['0','Keep it']].map(([v,l],i)=>el('label',null, el('input',{type:'radio',name:'ph-dur',value:v,checked:i===1}), el('span',{text:l}))));
+    const url=URL.createObjectURL(f);
+    try{ await C.load(url); picked=true; }catch(e){ err.textContent='Couldn’t read that image. Try a JPG or PNG.'; } });
+  const dur=el('div',{class:'phdur'},...[['0','Keep it'],['1','24 hours'],['7','1 week'],['30','1 month']].map(([v,l],i)=>el('label',null, el('input',{type:'radio',name:'ph-dur',value:v,checked:i===0}), el('span',{text:l}))));
   const f=el('form',{class:'modal',role:'dialog','aria-modal':'true'}, el('h3',{text:'Change profile picture 📸'}),
-    el('p',{class:'sub',text:'Pick a photo and how long to show it. It switches back by itself.'}),
-    el('div',{class:'phrow'}, prev, el('label',{class:'btn',for:'ph-file'},'📁 Choose photo'), file),
+    el('p',{class:'sub',text:'Choose a photo, then drag it and zoom until your face fits the circle.'}),
+    el('div',{class:'cropwrap'}, C.stage, C.zoomRow, el('label',{class:'btn',for:'ph-file'},'📁 Choose photo'), file),
     el('div',{class:'field'}, el('span',{class:'lab',text:'Show it for'}), dur),
     cur?el('p',{class:'sub',text:cur.until?'Current photo switches back '+untilText(cur.until)+'.':'Current photo stays until you change it.'}):null,
-    el('div',{class:'actions'}, err, cur?el('button',{class:'btn ghost',type:'button',onclick:()=>savePhoto(null)},'Use my regular photo'):null,
+    el('div',{class:'actions'}, err, cur?el('button',{class:'btn ghost',type:'button',onclick:()=>savePhoto(null)},'Remove photo'):null,
       el('button',{class:'btn ghost',type:'button',onclick:closeModal},'Cancel'), el('button',{class:'btn primary',type:'submit'},'Save')));
-  f.addEventListener('submit',ev=>{ ev.preventDefault(); if(!data){ err.textContent='Choose a photo first.'; return; }
-    const days=+((f.querySelector('input[name=ph-dur]:checked')||{}).value||7); savePhoto({data,until:days?Date.now()+days*864e5:0,set:Date.now()}); });
+  f.addEventListener('submit',ev=>{ ev.preventDefault(); if(!C.isReady()){ err.textContent='Choose a photo first.'; return; }
+    const data=C.output(320); const days=+((f.querySelector('input[name=ph-dur]:checked')||{}).value||0);
+    savePhoto({data,until:days?Date.now()+days*864e5:0,set:Date.now()}); });
   showModal(f);
 }
 async function savePhoto(photo){
