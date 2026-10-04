@@ -787,7 +787,20 @@ main.wrap{max-width:1360px}
 .fbright .bellcount{border-color:#fff}
 .fbright [data-label]{overflow:visible}
 .fbright [data-label]::before{content:attr(data-label);position:absolute;top:calc(100% + 3px);left:50%;transform:translateX(-50%);font:700 11px/1 var(--f-body);color:#4B4F56;white-space:nowrap;pointer-events:none;letter-spacing:0;filter:none}
-.fbright{padding-bottom:14px}
+.fbright{padding-bottom:18px}
+/* bigger, easier-to-find top bar */
+.fbin{height:84px}
+.fbtab{min-width:104px}
+.fbtab span{font-size:30px}
+.fbtab em{font-size:14px;margin-top:3px}
+.fbname b{font-size:23px}
+.fbname span{font-size:12.5px}
+.fbicon,.fbright .bell .bellbtn,.fbme{width:48px!important;height:48px!important;font-size:22px}
+.fbright{gap:14px}
+.fbright [data-label]::before{top:calc(100% + 5px);font-size:13px;color:#1C1E21}
+#signInBtn{font-size:16px;padding:10px 18px}
+.ticker{margin-top:6px}
+@media (max-width:760px){.fbin{height:66px}.fbtab span{font-size:22px}.fbtab em{font-size:11px}.fbicon,.fbright .bell .bellbtn,.fbme{width:38px!important;height:38px!important;font-size:17px}.fbright{gap:6px;padding-bottom:0}.fbright [data-label]::before{display:none}}
 @media (hover:hover){
   header [data-tip]:hover::after{bottom:auto!important;top:calc(100% + 9px)!important;z-index:200}
   header [data-tip]:hover::before{bottom:auto!important;top:calc(100% - 1px)!important;border-top-color:transparent!important;border-bottom-color:var(--navy)!important;z-index:200}
