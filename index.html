@@ -1136,7 +1136,7 @@ b.ulink:hover,.nm.ulink:hover{text-decoration:underline}
     </nav>
     <div class="fbright">
       <button class="fbicon" type="button" id="helpBtn" aria-label="Help" data-label="Help">?</button>
-      <button class="fbicon" type="button" id="navFriends" hidden aria-label="Friend requests" data-label="Friends">👥</button>
+      <button class="fbicon" type="button" id="navFriends" hidden aria-label="Friend requests" data-label="Friends">🧑‍🤝‍🧑</button>
       <div class="chatwrap" id="chatWrap"><button class="fbicon" type="button" id="navMsg" hidden aria-label="Messages" data-label="Chats">💬</button><div class="chatpop" id="chatMenu" hidden></div></div>
       <div class="bell" id="bell" hidden></div>
       <button class="btn primary small" type="button" id="signInBtn" hidden>Sign in</button>
@@ -3027,6 +3027,7 @@ async function _renderHome(){
   const signed=me&&me.id; const part=canParticipate(); const myGroups=(signed&&membersByUser[me.id]?.groups)||[];
   setKids(L,
     signed?el('button',{class:'lnav me',type:'button',onclick:()=>openMemberProfile(me.id)}, el('img',{src:me.avatarUrl||'',alt:''}), el('span',{text:me.name||'Your profile'})):null,
+    part?navLink('🧑‍🤝‍🧑','Friends',()=>{ profileUid=me.id; profileTab='connections'; showView('profile'); renderProfilePage(); }, (()=>{ let n=0; try{ n=incomingRequests().length; }catch(e){} return n?el('span',{class:'lbadge',text:n+' new'}):null; })()):null,
     navLink('🔬','Research radar',()=>{ ui.ftab='new'; renderForward(); showView('research'); }),
     navLink('🧪','Open trials',()=>{ ui.ftab='trials'; renderForward(); showView('research'); }),
     navLink('💊','Drug pipeline',()=>{ ui.ftab='pipeline'; renderForward(); showView('research'); }),
