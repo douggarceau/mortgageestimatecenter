@@ -810,6 +810,12 @@ main.wrap{max-width:1360px}
 .contacts .rcontact .dmav img{width:40px;height:40px}
 .contacts .rcontact small{color:#65676B}
 .contacts .rcontact .odot{width:12px;height:12px;background:#31A24C}
+.backbar{display:flex;align-items:center;gap:12px;margin:14px 0 4px}
+.backbtn{border:0;background:#E4E6EB;color:var(--ink);font:700 16px var(--f-body);padding:9px 18px;border-radius:999px;cursor:pointer}
+.backbtn:hover{background:#D8DADF}
+.backwhere{font:700 18px var(--f-body);color:#1C1E21;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.backhome{border:0;background:none;color:#0866FF;font:600 15px var(--f-body);cursor:pointer;padding:8px 10px;border-radius:8px}
+.backhome:hover{background:#F0F2F5}
 .fbname{flex:none;min-width:0}
 @media (max-width:1150px) and (min-width:761px){.fbtab{min-width:70px;padding:0 8px}.fbright{gap:8px}}
 .fbname span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:190px!important;line-height:1.15;display:block}
@@ -1161,6 +1167,7 @@ b.ulink:hover,.nm.ulink:hover{text-decoration:underline}
 <div class="remind" id="remind" hidden></div>
 <div class="wrap" id="welcome" hidden></div>
 <main class="wrap">
+  <div class="backbar" id="backbar" hidden></div>
   <section class="fbhome" id="home" data-v="home">
     <aside class="fbl" id="homeLeft" aria-label="Shortcuts"></aside>
     <div class="fbc"><div id="homeCompose"></div><div id="homeStrip"></div><div id="homeFeed" class="ffeed"></div></div>
@@ -2866,10 +2873,38 @@ function showView(v,opts){
   const trialsMode=v==='research'&&ui.ftab==='trials';
   document.querySelectorAll('.fbtab').forEach(b=>{ const on=(b.dataset.view===v&&!(trialsMode&&b.dataset.view==='research'))||(trialsMode&&b.dataset.view==='trials'); b.classList.toggle('on',on); b.setAttribute('aria-current',on?'page':'false'); });
   try{ localStorage.setItem('irtc-view',v); }catch(e){}
-  if(!opts||!opts.noScroll) window.scrollTo({top:0});
+  opts=opts||{};
+  const st={irtc:1,v,pu:v==='profile'?profileUid:null,ft:v==='research'?ui.ftab:null,tp:v==='discuss'?(dv.topic||null):null};
+  const cur=history.state;
+  if(opts.replace||!cur||!cur.irtc) history.replaceState({...st,y:0},'','#'+v);
+  else if(!opts.fromPop&&(cur.v!==st.v||cur.pu!==st.pu||cur.ft!==st.ft||cur.tp!==st.tp)){
+    try{ history.replaceState({...cur,y:window.scrollY},''); }catch(e){}
+    history.pushState({...st,y:0},'','#'+v+(st.pu?'/'+st.pu:''));
+  }
+  if(!opts.noScroll&&!opts.fromPop) window.scrollTo({top:0});
   if(v==='home') renderHome();
   if(v==='profile') renderProfilePage();
+  renderBackbar();
 }
+function renderBackbar(){
+  const bb=document.getElementById('backbar'); if(!bb) return;
+  if(VIEW==='home'){ bb.hidden=true; return; } bb.hidden=false;
+  const label=VIEW==='profile'?((profileUid&&me&&profileUid===me.id)?'Your profile':((profiles[profileUid]||{}).name||'Profile')):VIEW==='research'&&ui.ftab==='trials'?'Trials':VIEWS[VIEW];
+  setKids(bb, el('button',{class:'backbtn',type:'button','aria-label':'Go back',onclick:goBack},'← Back'), el('span',{class:'backwhere',text:label}),
+    el('button',{class:'backhome',type:'button',onclick:()=>showView('home')},'🏠 Home'));
+}
+function goBack(){ if(backDepth>0) history.back(); else showView('home'); }
+let backDepth=0;
+window.addEventListener('popstate',e=>{
+  const s=e.state; if(!s||!s.irtc) return;
+  backDepth=Math.max(0,backDepth-1);
+  try{ if(document.querySelector('#modalRoot .scrim')) closeModal(); }catch(x){}
+  if(s.pu) profileUid=s.pu; if(s.ft) ui.ftab=s.ft; if(s.v==='discuss') dv.topic=s.tp||null;
+  try{ if(s.v==='research') renderForward(); if(s.v==='discuss') renderDiscuss(); }catch(x){}
+  showView(s.v,{fromPop:true});
+  setTimeout(()=>window.scrollTo({top:s.y||0}),30);
+});
+(function(){ const ps=history.pushState.bind(history); history.pushState=function(...a){ backDepth++; return ps(...a); }; })();
 (function(){ const sv=Element.prototype.scrollIntoView;
   Element.prototype.scrollIntoView=function(...a){ const sec=this.closest&&this.closest('main [data-v]'); if(sec&&sec.hidden) showView(sec.dataset.v.split(' ')[0],{noScroll:true}); return sv.apply(this,a); }; })();
 document.addEventListener('click',e=>{ const a=e.target.closest&&e.target.closest('a[href^="#"]'); if(!a) return; const id=a.getAttribute('href').slice(1); const t=id&&document.getElementById(id); if(t&&t.closest('main [data-v]')){ e.preventDefault(); t.scrollIntoView({behavior:'smooth'}); } },true);
@@ -3467,7 +3502,7 @@ document.querySelectorAll('.fbtab').forEach(b=>b.addEventListener('click',()=>{ 
 document.getElementById('meBtn').addEventListener('click',e=>{ e.stopPropagation(); meOpen=!meOpen; renderMeMenu(); });
 document.getElementById('gsearch').addEventListener('input',e=>runSearch(e.target.value));
 document.getElementById('gsearch').addEventListener('focus',e=>runSearch(e.target.value));
-showView((()=>{ try{ return localStorage.getItem('irtc-view')||'home'; }catch(e){ return 'home'; } })(),{noScroll:true});
+showView((()=>{ try{ return localStorage.getItem('irtc-view')||'home'; }catch(e){ return 'home'; } })(),{noScroll:true,replace:true});
 document.getElementById('dmFab').addEventListener('click',()=>openDm(null));
 let chatOpen=false, chatTab='all', chatQ='', chatBusy=0;
 document.getElementById('navMsg').addEventListener('click',e=>{ e.stopPropagation(); chatOpen=!chatOpen; if(chatOpen){ chatQ=''; meOpen=false; try{ renderMeMenu(); }catch(x){} } renderChatMenu(); });
