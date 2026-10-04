@@ -928,8 +928,15 @@ main .stats{padding:0!important;background:transparent!important;box-shadow:none
 .emowrap{position:relative;display:inline-flex;vertical-align:middle}
 .emobtn{border:0;background:none;font-size:20px;cursor:pointer;padding:2px 4px;border-radius:50%;line-height:1}
 .emobtn:hover{background:#F0F2F5}
-.emopop{position:absolute;bottom:calc(100% + 6px);left:0;z-index:90;display:none;grid-template-columns:repeat(10,1fr);gap:2px;width:min(340px,86vw);max-height:220px;overflow-y:auto;background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.25);padding:8px}
-.emowrap.open .emopop{display:grid}
+.emopop{position:absolute;bottom:calc(100% + 6px);left:0;z-index:90;display:none;flex-direction:column;width:min(370px,90vw);height:min(360px,60vh);background:#fff;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.25);overflow:hidden}
+.emowrap.open .emopop{display:flex}
+.emotabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid #E4E6EB;overflow-x:auto;flex:none;scrollbar-width:none}
+.emotab{border:0;background:none;font-size:19px;padding:4px 6px;border-radius:6px;cursor:pointer;flex:none;line-height:1}
+.emotab:hover{background:#F0F2F5}
+.emogrid{flex:1;overflow-y:auto;padding:4px 8px 8px;position:relative}
+.emohead{font-size:12px;font-weight:700;color:#65676B;padding:8px 2px 4px;position:sticky;top:0;background:#fff;z-index:1}
+.emorow{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:2px}
+.cmadd .emopop{left:auto;right:0}
 .emo{border:0;background:none;font-size:22px;padding:4px;cursor:pointer;border-radius:6px;line-height:1}
 .emo:hover{background:#F0F2F5}
 .field label .emowrap{margin-left:4px}
@@ -2729,15 +2736,35 @@ function reactButton(id,cls){
   wrap.append(btn,bar); return wrap;
 }
 document.addEventListener('click',e=>{ if(!e.target.closest('.reactwrap')) document.querySelectorAll('.reactwrap.open').forEach(w=>w.classList.remove('open')); });
-const EMOJI=['😀','😃','😄','😁','😊','🙂','😉','😍','🤩','😎','🤓','🧐','🤔','😮','😲','😅','😂','🤣','😢','😭','😤','😬','🙃','😴','🥳','🤗','🤝','🙏','👏','🙌','👍','👎','👌','✌️','🤞','💪','👀','👋','✋','☝️',
-  '❤️','💙','💚','💛','💜','🧡','💯','✨','🔥','⭐','🎉','🎊','🏆','🥇','🎯','✅','❌','⚠️','❓','❗','💡','📌','📎','🔖','📅','⏰','⌛','🚀','📈','📉',
-  '📊','📋','📝','📄','📚','🔬','🧪','🧫','🧬','💊','💉','🩺','🧠','🦠','🏥','🩻','🧑‍🔬','👩‍⚕️','👨‍⚕️','🌍','☕','🍀','🌟','🤖'];
+const EMOJI_CATS=[
+ ['😀','Smileys',"😀 😃 😄 😁 😆 😅 🤣 😂 🙂 🙃 🫠 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😏 😒 🙄 😬 😮‍💨 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 😵‍💫 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👻 👽 🤖 😺 😸 😹 😻 😼 😽 🙀 😿 😾 🙈 🙉 🙊"],
+ ['👋','People',"👋 🤚 🖐️ ✋ 🖖 🫱 🫲 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 🫵 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 👶 🧒 👦 👧 🧑 👱 👨 🧔 👩 🧓 👴 👵 🙍 🙎 🙅 🙆 💁 🙋 🧏 🙇 🤦 🤷 🧑‍⚕️ 👨‍⚕️ 👩‍⚕️ 🧑‍🔬 👨‍🔬 👩‍🔬 🧑‍🏫 🧑‍💻 🧑‍🎓 🧑‍🍳 🧑‍🎤 🧑‍🎨 🦸 🧙 🧚 🧛 🧜 🧝 💆 💇 🚶 🧍 🏃 💃 🕺 🧘 🛌 👫 👭 👬 💏 💑 👪 🗣️ 👤 👥 🫂"],
+ ['❤️','Hearts',"❤️ 🧡 💛 💚 💙 🩵 💜 🤎 🖤 🩶 🤍 🩷 💔 ❤️‍🔥 ❤️‍🩹 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 ♥️ 💋 💌 💐 🌹 🥀 🌷 🌸 💮 🏵️ 🌻 🌼"],
+ ['🐶','Animals & nature',"🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐻‍❄️ 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🐤 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🪱 🐛 🦋 🐌 🐞 🐜 🪲 🦗 🕷️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦐 🦞 🦀 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🐘 🦛 🦏 🐪 🦒 🦘 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🐩 🦮 🐕‍🦺 🐈 🐈‍⬛ 🐓 🦃 🦚 🦜 🦢 🦩 🕊️ 🐇 🦝 🦨 🦡 🦫 🦦 🦥 🐁 🐀 🐿️ 🦔 🐾 🌲 🌳 🌴 🌵 🌾 🌿 ☘️ 🍀 🍁 🍂 🍃 🍄 🌰 🪴 🌍 🌎 🌏 🌙 ⭐ 🌟 ✨ ⚡ 🔥 🌈 ☀️ 🌤️ ⛅ 🌧️ ⛈️ 🌩️ ❄️ ☃️ ⛄ 🌊 💧 💦 ☔"],
+ ['🍕','Food & drink',"🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🫑 🌽 🥕 🧄 🧅 🥔 🍠 🥐 🥯 🍞 🥖 🥨 🧀 🥚 🍳 🧈 🥞 🧇 🥓 🥩 🍗 🍖 🌭 🍔 🍟 🍕 🫓 🥪 🥙 🧆 🌮 🌯 🥗 🥘 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🍤 🍙 🍚 🍘 🍥 🥠 🍢 🍡 🍧 🍨 🍦 🥧 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 🍩 🍪 🥜 🍯 🥛 ☕ 🫖 🍵 🧃 🥤 🧋 🍶 🍺 🍻 🥂 🍷 🥃 🍸 🍹 🍾 🧊"],
+ ['⚽','Activities',"⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🥏 🎱 🏓 🏸 🏒 🏑 🥍 🏏 ⛳ 🏹 🎣 🤿 🥊 🥋 🎽 🛹 ⛸️ 🥌 🎿 ⛷️ 🏂 🏋️ 🤸 ⛹️ 🤺 🤾 🏌️ 🏇 🧘 🏄 🏊 🤽 🚣 🧗 🚵 🚴 🏆 🥇 🥈 🥉 🏅 🎖️ 🎗️ 🎫 🎟️ 🎪 🎭 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🪘 🎷 🎺 🪗 🎸 🪕 🎻 🎲 ♟️ 🎯 🎳 🎮 🧩 🎉 🎊 🎈 🎁 🎀 🪅 🎆 🎇"],
+ ['✈️','Travel & places',"🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🛻 🚚 🚛 🚜 🛵 🏍️ 🚲 🛴 🚨 🚔 🚍 🚘 🚖 🚡 🚠 🚟 🚃 🚋 🚞 🚝 🚄 🚅 🚈 🚂 🚆 🚇 🚊 🚉 ✈️ 🛫 🛬 🛩️ 💺 🚁 🚀 🛸 🛰️ ⛵ 🚤 🛥️ 🛳️ ⛴️ 🚢 ⚓ 🗺️ 🗽 🗼 🏰 🏯 🏟️ 🎡 🎢 🎠 ⛲ 🏖️ 🏝️ 🏜️ 🌋 ⛰️ 🏔️ 🗻 🏕️ ⛺ 🏠 🏡 🏘️ 🏢 🏬 🏣 🏤 🏥 🏦 🏨 🏪 🏫 🏛️ ⛪ 🕌 🕍 🌁 🌃 🏙️ 🌄 🌅 🌆 🌇 🌉 🌌 🎑"],
+ ['🔬','Medicine & science',"🩺 💊 💉 🩸 🩹 🩻 🩼 🦠 🧬 🧪 🧫 🧯 🔬 🔭 ⚗️ 🧲 🌡️ 🏥 🚑 🧑‍⚕️ 👩‍⚕️ 👨‍⚕️ 🧑‍🔬 🧠 🫀 🫁 🦴 🦷 👁️ 🧘 😷 🤒 🤕 💤 ♿ 📊 📈 📉 📋 📝 📄 📑 🗂️ 📁 📚 📖 🔖 📌 📎 🖇️ 🗓️ 📅 ⏰ ⌛ ⏳ 💡 🔍 🔎 🧮 💻 🖥️ ⌨️ 🖨️ 📧 📨 📞 📱 🤖"],
+ ['💡','Objects',"⌚ 📱 💻 ⌨️ 🖥️ 🖨️ 🖱️ 💾 💿 📷 📸 📹 🎥 📽️ 🎞️ 📞 ☎️ 📺 📻 🎙️ ⏱️ ⏲️ ⏰ 🕰️ 🔋 🔌 💡 🔦 🕯️ 🧭 💸 💵 💶 💷 💳 💎 ⚖️ 🧰 🔧 🔨 🛠️ ⛏️ 🔩 ⚙️ 🧱 ⛓️ 🔫 💣 🔪 🛡️ 🚬 ⚱️ 🔮 📿 🧿 💈 🪄 🎎 🏮 🪔 🧸 🖼️ 🛍️ 🛒 🎁 ✉️ 📦 🏷️ 📮 📪 🗳️ ✏️ ✒️ 🖋️ 🖊️ 🖌️ 🖍️ 🗒️ 📆 🗑️ 🔒 🔓 🔑 🗝️ 🚪 🪑 🛋️ 🛏️ 🧴 🧷 🧹 🧺 🧻 🧼 🪥 🧽 🪣 🛁 🚿"],
+ ['✅','Symbols',"✅ ☑️ ✔️ ❌ ❎ ➕ ➖ ➗ ✖️ 💯 ❓ ❔ ❕ ❗ ‼️ ⁉️ ⚠️ 🚫 ⛔ 📛 🔞 ♻️ 🔰 ⭕ 🛑 ❇️ ✳️ 💠 🔷 🔶 🔹 🔸 🔺 🔻 🟥 🟧 🟨 🟩 🟦 🟪 🟫 ⬛ ⬜ 🔴 🟠 🟡 🟢 🔵 🟣 🟤 ⚫ ⚪ ▶️ ⏸️ ⏹️ ⏺️ ⏭️ ⏮️ ⏩ ⏪ 🔀 🔁 🔂 ⬆️ ⬇️ ⬅️ ➡️ ↗️ ↘️ ↙️ ↖️ ↕️ ↔️ 🔄 🔃 🆕 🆗 🆙 🆒 🆓 🆘 ℹ️ Ⓜ️ 🅿️ 🔢 #️⃣ *️⃣ 0️⃣ 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟 ©️ ®️ ™️ 💲 ☮️ ☯️ ✝️ ☪️ 🕉️ ✡️ ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ ⚕️ 🔱 ⚜️ 〽️ 💤 💢 💬 💭 🗯️ ♠️ ♣️ ♥️ ♦️ 🃏 🀄 🎴 🔇 🔈 🔉 🔊 🔔 🔕 📣 📢"],
+ ['🏳️','Flags',"🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏳️‍⚧️ 🏴‍☠️ 🇺🇸 🇨🇦 🇲🇽 🇧🇷 🇦🇷 🇨🇱 🇨🇴 🇬🇧 🇮🇪 🇫🇷 🇩🇪 🇮🇹 🇪🇸 🇵🇹 🇳🇱 🇧🇪 🇨🇭 🇦🇹 🇸🇪 🇳🇴 🇩🇰 🇫🇮 🇮🇸 🇵🇱 🇨🇿 🇭🇺 🇬🇷 🇹🇷 🇺🇦 🇮🇱 🇪🇬 🇿🇦 🇳🇬 🇰🇪 🇮🇳 🇵🇰 🇨🇳 🇯🇵 🇰🇷 🇹🇼 🇭🇰 🇸🇬 🇹🇭 🇻🇳 🇵🇭 🇮🇩 🇲🇾 🇦🇺 🇳🇿 🇸🇦 🇦🇪 🇶🇦 🇮🇷"]
+].map(([ic,name,list])=>[ic,name,list.split(' ').filter(Boolean)]);
+const EMOJI=EMOJI_CATS.flatMap(c=>c[2]);
+function recentEmoji(){ try{ return JSON.parse(localStorage.getItem('irtc-emoji')||'[]'); }catch(e){ return []; } }
+function rememberEmoji(e){ try{ const r=[e,...recentEmoji().filter(x=>x!==e)].slice(0,24); localStorage.setItem('irtc-emoji',JSON.stringify(r)); }catch(x){} }
 function emojiBtn(target){
   const wrap=el('span',{class:'emowrap'});
-  const pop=el('div',{class:'emopop',role:'dialog','aria-label':'Emoji'},...EMOJI.map(e=>el('button',{type:'button',class:'emo',onclick:ev=>{ ev.stopPropagation();
-    const s=target.selectionStart??target.value.length, en=target.selectionEnd??s; target.value=target.value.slice(0,s)+e+target.value.slice(en);
-    target.focus(); const p=s+e.length; try{ target.setSelectionRange(p,p); }catch(x){} target.dispatchEvent(new Event('input',{bubbles:true})); }},e)));
-  const b=el('button',{class:'emobtn',type:'button','aria-label':'Add emoji','data-tip':'Add emoji',onclick:ev=>{ ev.stopPropagation(); const open=!wrap.classList.contains('open'); document.querySelectorAll('.emowrap.open').forEach(w=>w.classList.remove('open')); wrap.classList.toggle('open',open); }},'😊');
+  const insert=e=>{ const s=target.selectionStart??target.value.length, en=target.selectionEnd??s; target.value=target.value.slice(0,s)+e+target.value.slice(en);
+    target.focus(); const p=s+e.length; try{ target.setSelectionRange(p,p); }catch(x){} target.dispatchEvent(new Event('input',{bubbles:true})); rememberEmoji(e); };
+  const grid=el('div',{class:'emogrid'}); const tabs=el('div',{class:'emotabs'});
+  const draw=()=>{
+    const cats=[...(recentEmoji().length?[['🕘','Recently used',recentEmoji()]]:[]),...EMOJI_CATS];
+    setKids(tabs,...cats.map((c,i)=>el('button',{type:'button',class:'emotab','aria-label':c[1],title:c[1],onclick:ev=>{ ev.stopPropagation(); const h=grid.querySelector('[data-cat="'+i+'"]'); if(h) grid.scrollTop=h.offsetTop-grid.offsetTop; }},c[0])));
+    setKids(grid,...cats.flatMap((c,i)=>[el('div',{class:'emohead','data-cat':String(i),text:c[1]}), el('div',{class:'emorow'},...c[2].map(e=>el('button',{type:'button',class:'emo','aria-label':e,onclick:ev=>{ ev.stopPropagation(); insert(e); }},e)))]));
+  };
+  const pop=el('div',{class:'emopop',role:'dialog','aria-label':'Emoji'}, tabs, grid);
+  pop.addEventListener('click',e=>e.stopPropagation());
+  const b=el('button',{class:'emobtn',type:'button','aria-label':'Add emoji','data-tip':'Add emoji',onclick:ev=>{ ev.stopPropagation(); const open=!wrap.classList.contains('open'); document.querySelectorAll('.emowrap.open').forEach(w=>w.classList.remove('open')); if(open) draw(); wrap.classList.toggle('open',open); }},'😊');
   wrap.append(b,pop); return wrap;
 }
 document.addEventListener('click',e=>{ if(!e.target.closest('.emowrap')) document.querySelectorAll('.emowrap.open').forEach(w=>w.classList.remove('open')); });
