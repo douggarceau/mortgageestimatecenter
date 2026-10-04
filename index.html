@@ -800,6 +800,16 @@ main.wrap{max-width:1360px}
 .fbright [data-label]::before{top:calc(100% + 5px);font-size:13px;color:#1C1E21}
 #signInBtn{font-size:16px;padding:10px 18px}
 .fblogo,.fblogo .fbseal{width:54px!important;height:54px!important}
+.contacts .chead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.contacts .chead h4{margin:0;flex:1;font-size:17px;color:#65676B}
+.conline{font-size:12.5px;font-weight:700;color:#31A24C}
+.cbtn{width:32px;height:32px;border-radius:50%;border:0;background:none;cursor:pointer;font-size:15px}
+.cbtn:hover{background:#E4E6EB}
+.csearch{width:100%;border:0;background:#F0F2F5;border-radius:999px;padding:8px 12px;margin-bottom:6px;font:inherit;font-size:14px}
+.csub{font-size:12px;font-weight:700;color:#65676B;text-transform:uppercase;letter-spacing:.06em;margin:8px 4px 2px}
+.contacts .rcontact .dmav img{width:40px;height:40px}
+.contacts .rcontact small{color:#65676B}
+.contacts .rcontact .odot{width:12px;height:12px;background:#31A24C}
 .fbname{flex:none;min-width:0}
 @media (max-width:1150px) and (min-width:761px){.fbtab{min-width:70px;padding:0 8px}.fbright{gap:8px}}
 .fbname span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:190px!important;line-height:1.15;display:block}
@@ -3018,6 +3028,30 @@ function renderStrip(box){
 
 /* columns */
 function navLink(icon,label,fn,extra){ return el('button',{class:'lnav',type:'button',onclick:fn}, el('span',{class:'lico',text:icon}), el('span',{text:label}), extra||null); }
+let contactQ='', contactSearch=false;
+function contactsBlock(contacts){
+  const box=el('div',{class:'rblock contacts'});
+  const draw=()=>{
+    const q=contactQ.trim().toLowerCase();
+    const list=contacts.filter(([u,m])=>!q||((profiles[u]?.name||'')+' '+(m.org||'')+' '+(m.specialty||'')).toLowerCase().includes(q));
+    const on=list.filter(([u])=>isOnline(u)), off=list.filter(([u])=>!isOnline(u));
+    const row=([u,m])=>el('button',{class:'rcontact',type:'button',onclick:()=>openDm(u),'aria-label':'Message '+(profiles[u]?.name||'member')},
+      el('span',{class:'dmav'}, el('img',{src:profiles[u]?.avatarUrl||'',alt:''}), onlineDot(u)),
+      el('span',{style:'min-width:0'}, el('b',{text:profiles[u]?.name||'Member'}), el('small',{text:isOnline(u)?'Online now':(liveStatus(m)?'💭 '+liveStatus(m):[m.specialty,m.org].filter(Boolean).join(' · '))})));
+    const search=el('input',{class:'csearch',type:'search',placeholder:'Search contacts','aria-label':'Search contacts',value:contactQ,hidden:!contactSearch});
+    search.addEventListener('input',()=>{ contactQ=search.value; draw(); const s2=box.querySelector('.csearch'); if(s2){ s2.focus(); s2.setSelectionRange(s2.value.length,s2.value.length); } });
+    setKids(box,
+      el('div',{class:'chead'}, el('h4',{text:'Contacts'}), el('span',{class:'conline',text:on.length?on.length+' online':''}),
+        el('button',{class:'cbtn',type:'button','aria-label':'Search contacts',onclick:()=>{ contactSearch=!contactSearch; if(!contactSearch) contactQ=''; draw(); const s2=box.querySelector('.csearch'); if(s2&&!s2.hidden) s2.focus(); }},'🔍')),
+      search,
+      ...(contacts.length?[
+        on.length?el('div',{class:'csub',text:'Online now'}):null, ...on.slice(0,30).map(row),
+        off.length&&on.length?el('div',{class:'csub',text:'Everyone else'}):null, ...off.slice(0,40).map(row),
+        !list.length?el('p',{class:'rnone',text:'No one matches.'}):null
+      ]:[el('p',{class:'rnone',text:'Members appear here once they join.'})]));
+  };
+  draw(); return box;
+}
 let homeRaf=0;
 function renderHome(){ if(homeRaf) return; homeRaf=setTimeout(()=>{ homeRaf=0; _renderHome().catch(e=>console.error(e)); },16); }
 async function _renderHome(){
@@ -3063,12 +3097,11 @@ async function _renderHome(){
           el('span',{class:'rcal'}, el('b',{text:d.getDate()}), el('small',{text:d.toLocaleDateString(undefined,{month:'short'})})), el('span',{style:'min-width:0'}, el('b',{text:m.title}), el('small',{text:d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit',timeZoneName:'short'})+' · '+untilLabel(d-now)}))); })
         : [el('p',{class:'rnone',text:'No meetings scheduled.'})]),
       part?el('button',{class:'cite',type:'button',onclick:()=>openMeetingForm(null)},'+ Schedule a meeting'):null),
+    part?contactsBlock(contacts):null,
     part&&incomingRequests().length?el('div',{class:'rblock'}, el('h4',{text:'Connection requests'}), ...incomingRequests().slice(0,3).map(u=>el('div',{class:'rsugg'}, el('span',{class:'dmav ulink','data-uid':u}, el('img',{src:profiles[u]?.avatarUrl||'',alt:''})), el('div',{style:'min-width:0'}, el('b',{class:'ulink','data-uid':u,text:profiles[u]?.name||'Member'}), connButton(u,true))))):null,
     part&&suggestions(3).length?el('div',{class:'rblock'}, el('h4',{text:'People you may know'}), ...suggestions(3).map(s=>el('div',{class:'rsugg'}, el('span',{class:'dmav ulink','data-uid':s.u}, el('img',{src:profiles[s.u]?.avatarUrl||'',alt:''})), el('div',{style:'min-width:0'}, el('b',{class:'ulink','data-uid':s.u,text:profiles[s.u]?.name||'Member'}), el('small',{text:s.why}), connButton(s.u,true))))):null,
     el('div',{class:'rblock'}, el('h4',{text:'World clocks'}), el('div',{id:'clockbar',class:'clockbar rclock'})),
-    part?el('div',{class:'rblock'}, el('h4',null,'Members ', el('small',{text:onlineIds.size?`${[...onlineIds].filter(u=>u!==me.id).length} online`:''})),
-      ...(contacts.length? contacts.slice(0,25).map(([u,m])=>el('button',{class:'rcontact',type:'button',onclick:()=>openDm(u),'data-tip':'Send a message'}, el('span',{class:'dmav'}, el('img',{src:profiles[u]?.avatarUrl||'',alt:''}), onlineDot(u)), el('span',{style:'min-width:0'}, el('b',{text:profiles[u]?.name||'Member'}), el('small',{text:liveStatus(m)?'💭 '+liveStatus(m):(m.specialty||'')}))))
-        : [el('p',{class:'rnone',text:'Members appear here once they join.'})])):null);
+    null);
   try{ renderClock(); }catch(e){}
 }
 
