@@ -2461,10 +2461,11 @@ async function convoSummaries(){
 }
 /* ---------- sounds & alerts ---------- */
 let mailPrimed=false, soundLast={};
-const SOUND_DEF={mail:'voice',friend:'voice',bell:'chime',voice:'',volume:0.8};
+const SOUND_DEF={mail:'voice',friend:'voice',like:'chime',bell:'chime',voice:'',volume:0.8};
 const SOUND_INFO={
   mail:{icon:'📬',label:'New message',say:'You’ve got mail!',toast:'📬 You’ve got mail!',notes:[[659.25,0],[880,0.14]]},
   friend:{icon:'🧑‍🤝‍🧑',label:'Friend request',say:'You’ve got a friend request!',toast:'🧑‍🤝‍🧑 You’ve got a friend request!',notes:[[523.25,0],[659.25,0.12],[783.99,0.24]]},
+  like:{icon:'👍',label:'Likes & reactions',say:'Someone liked your post!',toast:'👍 Someone reacted to your post',notes:[[784,0],[1046.5,0.1]]},
   bell:{icon:'🔔',label:'Other notifications',say:'You have a new notification.',toast:'🔔 New notification',notes:[[1046.5,0]]}
 };
 function soundPrefs(){ try{ const x=JSON.parse(localStorage.getItem('irtc-sounds')||'null'); if(x) return {...SOUND_DEF,...x}; if(localStorage.getItem('irtc-mailvoice')==='off') return {...SOUND_DEF,mail:'off'}; }catch(e){} return {...SOUND_DEF}; }
@@ -2476,9 +2477,9 @@ function englishVoices(){ try{ return (speechSynthesis.getVoices()||[]).filter(v
 function sayText(text,prefs){ try{ if(!window.speechSynthesis) return; const u=new SpeechSynthesisUtterance(text); u.rate=0.95; u.pitch=1.05; u.volume=prefs.volume;
   const vs=englishVoices(); const v=(prefs.voice&&vs.find(x=>x.name===prefs.voice))||vs.find(x=>/en[-_]US/i.test(x.lang))||vs[0]; if(v) u.voice=v;
   speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
-function playSound(kind,test){
+function playSound(kind,test,toastText){
   const info=SOUND_INFO[kind]; if(!info) return; const prefs=soundPrefs(); const mode=prefs[kind]||'off';
-  if(!test){ if(Date.now()-(soundLast[kind]||0)<8000) return; soundLast[kind]=Date.now(); toast(info.toast); }
+  if(!test){ if(Date.now()-(soundLast[kind]||0)<8000) return; soundLast[kind]=Date.now(); toast(toastText||info.toast); }
   if(mode==='off') return;
   chime(info.notes,prefs.volume);
   if(mode==='voice') setTimeout(()=>sayText(info.say,prefs),info.notes.length*130+250);
@@ -2488,7 +2489,7 @@ try{ if(window.speechSynthesis) speechSynthesis.onvoiceschanged=()=>{}; }catch(e
 function soundsSection(){
   const p=soundPrefs();
   const row=kind=>{ const i=SOUND_INFO[kind];
-    const sel=el('select',{class:'sndsel','aria-label':i.label}, ...(kind==='bell'?[['chime','Chime'],['voice','Voice'],['off','Off']]:[['voice','Voice + chime'],['chime','Chime only'],['off','Off']]).map(([v,l])=>el('option',{value:v,selected:p[kind]===v},l)));
+    const sel=el('select',{class:'sndsel','aria-label':i.label}, ...((kind==='bell'||kind==='like')?[['chime','Chime'],['voice','Voice'],['off','Off']]:[['voice','Voice + chime'],['chime','Chime only'],['off','Off']]).map(([v,l])=>el('option',{value:v,selected:p[kind]===v},l)));
     sel.addEventListener('change',()=>{ const q=soundPrefs(); q[kind]=sel.value; saveSoundPrefs(q); });
     return el('div',{class:'sndrow'}, el('span',{class:'sndico',text:i.icon}), el('span',{class:'sndtxt'}, el('b',{text:i.label}), el('small',{text:'“'+i.say+'”'})), sel,
       el('button',{class:'btn small',type:'button',onclick:()=>playSound(kind,true)},'▶ Test'));
@@ -2500,7 +2501,7 @@ function soundsSection(){
   const vol=el('input',{type:'range',min:'0.1',max:'1',step:'0.1',value:String(p.volume),'aria-label':'Volume',class:'sndvol'});
   vol.addEventListener('change',()=>{ const q=soundPrefs(); q.volume=Number(vol.value); saveSoundPrefs(q); playSound('mail',true); });
   return el('div',{class:'setsec',id:'soundsSec'}, el('h4',{text:'Sounds & alerts 🔊'}),
-    row('mail'), row('friend'), row('bell'),
+    row('mail'), row('friend'), row('like'), row('bell'),
     el('div',{class:'sndrow'}, el('span',{class:'sndico',text:'🗣️'}), el('span',{class:'sndtxt'}, el('b',{text:'Voice'}), el('small',{text:'Pick who says it. You’ll hear a sample.'})), vsel),
     el('div',{class:'sndrow'}, el('span',{class:'sndico',text:'🔉'}), el('span',{class:'sndtxt'}, el('b',{text:'Volume'})), vol),
     el('p',{class:'hintline',text:'Sounds play while the site is open. Your browser may stay quiet until you’ve clicked somewhere on the page once.'}));
@@ -2699,6 +2700,7 @@ async function startAsk(){
 let SEEN={}, SEEN0={};
 (function(){ const now=Date.now(); let s=null; try{ s=JSON.parse(localStorage.getItem('irtc-seen')||'null'); }catch(e){}
   if(!s) s={radar:now-14*864e5,discuss:now,meetings:now,groups:now,directory:now};
+  if(!s.likes) s.likes=now;
   SEEN={...s}; SEEN0={...s}; })();
 function saveSeen(){ try{ localStorage.setItem('irtc-seen',JSON.stringify(SEEN)); }catch(e){} }
 const dateMs=d=>{ const x=toDate(d); return x?x.getTime():0; };
@@ -2803,14 +2805,19 @@ function fbEvents(){
       ev.push({uid:p.uid,ts:p.created,unread:p.created>SEEN.discuss,text:[el('b',{text:who(p.uid).name}), p.parent?(mineTopic?' replied to your post “':' replied to “')+t.title+'”':' started a discussion: “'+t.title+'”'],
         go:()=>{ dv.topic=t.id; renderDiscuss(); document.getElementById('discuss').scrollIntoView({behavior:'smooth'}); }}); }
     const myIds=new Set(allPosts().filter(p=>mine(p.uid)).map(p=>p.id));
-    for(const [u,v] of Object.entries(likesByUser)){ if(mine(u)) continue; const n=Object.keys(reactMap(v)).filter(id=>myIds.has(id)).length; if(n) ev.push({uid:u,ts:0,unread:false,text:[el('b',{text:who(u).name}),` reacted to ${n>1?n+' of your posts':'your post'}`],go:()=>document.getElementById('discuss').scrollIntoView({behavior:'smooth'})}); } }
+    const myTopicOf={}; for(const p of allPosts().filter(p=>mine(p.uid))){ const t=p.parent?byId[p.parent]:p; myTopicOf[p.id]={topic:t,title:(t&&t.title)||'',reply:!!p.parent}; }
+    for(const pr of allProjects().filter(p=>mine(p.uid))) myTopicOf['p:'+pr.id]={project:pr,title:pr.title};
+    for(const [u,v] of Object.entries(likesByUser)){ if(mine(u)) continue; const r=reactMap(v), tt=(v&&v.t)||{};
+      for(const [id,emo] of Object.entries(r)){ const it=myTopicOf[id]; if(!it) continue; const ts=tt[id]||0; if(ts&&now-ts>30*864e5) continue;
+        ev.push({kind:'like',key:'like-'+u+'-'+id+'-'+emo,uid:u,ts,unread:!!ts&&ts>(SEEN.likes||now),text:[el('b',{text:who(u).name}),` reacted ${emo} to your ${it.project?'project':(it.reply?'comment':'post')}`+(it.title?' “'+(it.title.length>60?it.title.slice(0,58)+'…':it.title)+'”':'')],
+          go:()=>{ if(it.project){ ui.group=it.project.group; renderGroups(); showView('groups'); } else if(it.topic) openThread(it.topic); else showView('discuss'); }}); } } }
   if(dataReady){ for(const p of allProjects()) if(!mine(p.uid)&&recent(p.created)) ev.push({uid:p.uid,ts:p.created,unread:p.created>SEEN.groups,text:[el('b',{text:who(p.uid).name}),' posted a project: '+p.title],go:()=>{ ui.group=p.group; renderGroups(); document.getElementById('groups').scrollIntoView({behavior:'smooth'}); }});
     for(const [u,m] of Object.entries(membersByUser)) if(!mine(u)&&profileDone(m)&&recent(m.joined)) ev.push({uid:u,ts:m.joined,unread:m.joined>SEEN.directory,text:[el('b',{text:who(u).name}),' joined the consortium'+(m.org?' from '+m.org:'')],go:()=>document.getElementById('directory').scrollIntoView({behavior:'smooth'})}); }
   const nr=newCounts().radar; if(nr) ev.push({ts:now-1,unread:true,icon:'🔬',text:[el('b',{text:nr+' new AT/RT research item'+(nr>1?'s':'')}),' on the radar'],go:()=>{ ui.ftab='new'; renderForward(); document.getElementById('forward').scrollIntoView({behavior:'smooth'}); }});
   if(isAdmin()&&typeof pendingReqs==='function') for(const r of pendingReqs()) ev.push({key:'jr-'+r.uid,ts:new Date(r.created_at).getTime()||now,unread:true,urgent:true,icon:'🛂',text:[el('b',{text:r.name||r.email||'Someone'}),' asked to join'+(r.org?' from '+r.org:'')+'. Tap to review'],go:()=>openRequests()});
   return ev.sort((a,b)=>(b.urgent?1:0)-(a.urgent?1:0)||(b.unread?1:0)-(a.unread?1:0)||b.ts-a.ts).slice(0,25);
 }
-function markAllRead(){ const n=Date.now(); for(const k of ['radar','discuss','meetings','groups','directory']) SEEN[k]=n; saveSeen(); updateNewLights(); renderBell(); }
+function markAllRead(){ const n=Date.now(); for(const k of ['radar','discuss','meetings','groups','directory','likes']) SEEN[k]=n; saveSeen(); updateNewLights(); renderBell(); }
 
 /* ---------- reactions & emoji picker ---------- */
 const REACTS=[['👍','Like'],['❤️','Love'],['😂','Haha'],['😮','Wow'],['😢','Sad'],['👏','Applause'],['💡','Insightful'],['🔥','Fire'],['🎉','Celebrate'],['🙏','Thanks']];
@@ -2823,10 +2830,12 @@ function reactSummary(id){ const c={}; for(const v of Object.values(likesByUser)
   return n? el('span',{class:'rsum',title:tops.map(([e,k])=>e+' '+k).join('  ')}, el('span',{class:'rsumi'},...tops.slice(0,3).map(([e])=>el('span',{class:'remo',text:e}))), String(n)) : null; }
 async function setReaction(id,emoji){
   if(!canParticipate()){ toast('Complete your profile to react.'); return; }
-  const r=reactMap(likesByUser[me.id]); if(r[id]===emoji||!emoji) delete r[id]; else r[id]=emoji;
-  const keys=Object.keys(r); if(keys.length>3000) for(const k of keys.slice(0,keys.length-3000)) delete r[k];
-  likesByUser[me.id]={r}; renderDiscuss(); renderHome();
-  try{ await db.doc('likes/'+me.id).set({r}); }catch(e){ handleWriteErr(e); }
+  const r=reactMap(likesByUser[me.id]); const t={...((likesByUser[me.id]||{}).t||{})};
+  if(r[id]===emoji||!emoji){ delete r[id]; delete t[id]; } else { r[id]=emoji; t[id]=Date.now(); }
+  const keys=Object.keys(r); if(keys.length>3000) for(const k of keys.slice(0,keys.length-3000)){ delete r[k]; delete t[k]; }
+  for(const k of Object.keys(t)) if(!r[k]) delete t[k];
+  likesByUser[me.id]={r,t}; renderDiscuss(); renderHome();
+  try{ await db.doc('likes/'+me.id).set({r,t}); }catch(e){ handleWriteErr(e); }
 }
 function toggleLike(id){ return setReaction(id, iLike(id)?'':'👍'); }
 function reactButton(id,cls){
@@ -2946,7 +2955,10 @@ function renderBell(){
   const host=document.getElementById('bell'); if(!host) return;
   if(!canParticipate()){ host.hidden=true; return; } host.hidden=false;
   const ev=bellList(); const unread=ev.filter(x=>x.unread).length; const urgent=ev.some(x=>x.urgent);
-  { const other=ev.filter(x=>x.unread&&!/sent you|wants to connect/.test(bellPlain(bellParts(x.text)))).length; if(dataReady&&window._bellPrev!=null&&other>window._bellPrev) playSound('bell'); if(dataReady) window._bellPrev=other; }
+  { const likes=ev.filter(x=>x.unread&&x.kind==='like'); const other=ev.filter(x=>x.unread&&x.kind!=='like'&&!/sent you|wants to connect/.test(bellPlain(bellParts(x.text)))).length;
+    if(dataReady&&window._likePrev!=null&&likes.length>window._likePrev){ const x=likes.sort((a,b)=>b.ts-a.ts)[0]; playSound('like',false,'👍 '+bellPlain(bellParts(x.text))); }
+    else if(dataReady&&window._bellPrev!=null&&other>window._bellPrev) playSound('bell');
+    if(dataReady){ window._bellPrev=other; window._likePrev=likes.length; } }
   host.className='bell'+(urgent?' urgent':unread?' lit':'');
   const btn=el('button',{class:'bellbtn',type:'button','data-label':'Alerts','aria-label':unread?`Notifications, ${unread} new`:'Notifications','aria-expanded':String(bellOpen),
     onclick:e=>{ e.stopPropagation(); bellOpen=!bellOpen; renderBell(); }}, '🔔', unread?el('span',{class:'bellcount',text:unread>9?'9+':unread}):null);
